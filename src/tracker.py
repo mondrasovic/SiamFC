@@ -38,9 +38,9 @@ class TrackerConfig:
     response_size: int = 17  # Dimension length of the square output score (response) map.
     response_upscale: int = 272 // 17  # Upscale coefficient for the response map resizing. Authors
                                        # chose to upscale the response map from 17x17 to 272x272.
-    n_search_scales = 5  # No. of different scaled over which the object is searched for.
-    scale_step = 1.025
-    scale_damping = 0.35  # Scale interpolation coefficient to provide damping.
+    n_search_scales: int = 5  # No. of different scaled over which the object is searched for.
+    scale_step: float = 1.025
+    scale_damping: float = 0.35  # Scale interpolation coefficient to provide damping.
 
 class TrackerSiamFC(trackers.Tracker):
     def __init__(self, config: TrackerConfig, model_path: Optional[str] = None) -> None:
@@ -91,21 +91,19 @@ class TrackerSiamFC(trackers.Tracker):
         self._scale_factors = self._config.scale_step ** np.linspace(
             -n_half_search_scales, n_half_search_scales, self._config.n_search_scales
         )
-
-        
     
     @torch.no_grad()
     def init(self, image: Image, bbox: BBoxT) -> None:
         self._model.eval()
         
         # Convert the bounding box to 0-indexed and center-based with [y, x, h, w] ordering.
-        bbox_converted = np.float32(
+        bbox_yxhw = np.float32(
             ((bbox[1] - 1) + (bbox[3] - 1) / 2.0,
              (bbox[0] - 1) + (bbox[2] - 1) / 2.0,
              bbox[3],
              bbox[2]))
-        self._exemplar_center = bbox_converted[:2]
-        self._exemplar_size = bbox_converted[2:]
+        self._exemplar_center = bbox_yxhw[:2]
+        self._exemplar_size = bbox_yxhw[2:]
         
         # TODO Refactor this.
         # Exemplar and instance (search) sizes.
@@ -120,6 +118,8 @@ class TrackerSiamFC(trackers.Tracker):
         self._exemplar_with_context_size = np.sqrt(np.prod(self._exemplar_size + context_size))
         scale = self._exemplar_with_context_size / self._config.exemplar_size
         self._instance_size_adjusted = round(self._config.instance_size * scale)
+        
+        
         
     
     @torch.no_grad()
