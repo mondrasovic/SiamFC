@@ -11,16 +11,6 @@ from sot.bbox import BBox
 SizeT = Union[np.ndarray, Tuple[int, int]]
 
 
-def build_square_cosine_window(size: int) -> np.ndarray:
-    assert size > 0
-    
-    hanning_1d = np.hanning(size)
-    hanning_2d = np.outer(hanning_1d, hanning_1d)
-    hanning_2d /= np.sum(hanning_2d)
-    
-    return hanning_2d
-
-
 def calc_bbox_side_size_with_context(bbox: BBox) -> float:
     context_size = bbox.size.mean()  # Average dimension.
     scaled_side_size = np.sqrt(np.prod(bbox.size + context_size))

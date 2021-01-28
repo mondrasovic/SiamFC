@@ -28,6 +28,8 @@ class TrackerConfig:
     # Influence of cosine (Hanning) window on the response map.
     cosine_win_influence = 0.176
     
+    total_stride = 8
+    
     # Upscale coefficient for the response
     # map. Authors chose to upscale the
     # response map from 17x17 to 272x272.

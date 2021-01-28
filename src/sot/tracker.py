@@ -29,39 +29,27 @@ class TrackerSiamFC:
         
         self.optimizer = optim.SGD(
             self.model.parameters(), lr=self.cfg.initial_lr,
-            weight_decay=self.cfg.weight_decay,
-            momentum=self.cfg.momentum)
+            weight_decay=self.cfg.weight_decay, momentum=self.cfg.momentum)
         self.criterion = None
         
-        # Learning rate is geometrically annealed at each epoch. Starting from
-        # A and terminating at B, then the known gamma factor x for n epochs
-        # is computed as
-        #         A * x ^ n = B,
-        #                 x = (B / A)^(1 / n).
-        gamma = np.power(
-            self.cfg.ultimate_lr / self.cfg.initial_lr,
-            1.0 / self.cfg.n_epochs)
-        self.lr_scheduler = optim.lr_scheduler.ExponentialLR(
-            self.optimizer, gamma)
+        self.lr_scheduler = self.create_exponential_lr_scheduler(
+            self.optimizer, self.cfg.initial_lr, self.cfg.ultimate_lr,
+            self.cfg.n_epochs)
         
-        # Create a normalized cosine (Hanning) window.
-        self.upscaled_response_size: int =\
+        self.response_size_upscaled: int =\
             self.cfg.response_size * self.cfg.response_upscale
-        self.hanning: np.ndarray = np.outer(
-            np.hanning(self.upscaled_response_size),
-            np.hanning(self.upscaled_response_size))
-        self.hanning /= np.sum(self.hanning)
+        self.cosine_win: np.ndarray = self.create_square_cosine_window(
+            self.response_size_upscaled)
         
-        # Authors chose to search for the object over multiple different scales.
-        n_half_search_scales = self.cfg.n_scales // 2
-        self.search_scales: np.ndarray = self.cfg.scale_step ** np.linspace(
-            -n_half_search_scales, n_half_search_scales,
-            self.cfg.n_scales)
+        # Search for the object over multiple different scales
+        # (smaller and bigger).
+        self.search_scales: np.ndarray = self.create_search_scales(
+            self.cfg.scale_step, self.cfg.n_scales)
+
+        self.curr_instance_side_size: int = self.cfg.instance_size
         
-        self.instance_bbox: Optional[BBox] = None
-        self.exemplar_bbox: Optional[BBox] = None
-        self.exemplar_img: Optional[np.ndarray] = None
-        self.exemplar_emb: Optional[np.ndarray] = None
+        self.target_bbox = None
+        self.exemplar_emb = None
     
     @torch.no_grad()
     def init(self, img: np.ndarray, bbox: np.ndarray) -> None:
@@ -81,34 +69,37 @@ class TrackerSiamFC:
         # the "half" in p.
         
         assert self.cfg.exemplar_size < self.cfg.instance_size
-        bbox = BBox(*bbox)
-        instance_side_size = calc_bbox_side_size_with_context(bbox)
-        size_ratio = self.cfg.exemplar_size / self.cfg.instance_size
-        exemplar_side_size = instance_side_size * size_ratio
         
-        self.exemplar_bbox = BBox.build_from_center_and_size(
-            bbox.center, np.asarray((exemplar_side_size, exemplar_side_size)))
-        self.exemplar_img = center_crop_and_resize(
-            img, self.exemplar_bbox,
+        self.target_bbox = BBox(*bbox)
+        self.curr_instance_side_size = calc_bbox_side_size_with_context(
+            self.target_bbox)
+        size_ratio = self.cfg.exemplar_size / self.cfg.instance_size
+        exemplar_side_size = self.curr_instance_side_size * size_ratio
+        
+        exemplar_bbox = BBox.build_from_center_and_size(
+            self.target_bbox.center,
+            np.asarray((exemplar_side_size, exemplar_side_size)))
+        exemplar_img = center_crop_and_resize(
+            img, exemplar_bbox,
             (self.cfg.exemplar_size, self.cfg.exemplar_size))
         
-        exemplar_img_tensor = cv_img_to_tensor(self.exemplar_img, self.device)
+        exemplar_img_tensor = cv_img_to_tensor(exemplar_img, self.device)
         self.exemplar_emb: torch.Tensor = self.model.extract_visual_features(
             exemplar_img_tensor)
     
     @torch.no_grad()
-    def update(self, img: np.ndarray) -> None:
+    def update(self, img: np.ndarray) -> np.ndarray:
         assert img.ndim == 3
-        
-        self.model.eval()
         
         img = cv.cvtColor(img, cv.COLOR_BGR2RGB)
         instance_size = (self.cfg.instance_size, self.cfg.instance_size)
-        instances_imgs = [center_crop_and_resize(img, bbox, instance_size)
-                       for bbox in self.iter_scaled_instance_bboxes()]
+        instances_imgs = [
+            center_crop_and_resize(img, bbox, instance_size)
+            for bbox in self.iter_target_centered_scaled_instance_bboxes()]
         instances_imgs = np.stack(instances_imgs, axis=0)
         
         instances_imgs_tensor = cv_img_to_tensor(instances_imgs, self.device)
+        self.model.eval()
         instances_features = self.model.extract_visual_features(
             instances_imgs_tensor)
         
@@ -116,23 +107,82 @@ class TrackerSiamFC:
             self.exemplar_emb, instances_features)
         # Remove the channel dimension, as it is just 1.
         responses = responses.squeeze(1).cpu().numpy()
-        # Resize response maps.
-        response_size = (self.cfg.response_size, self.cfg.response_size)
+        
+        response_size_upscaled = (
+            self.response_size_upscaled, self.response_size_upscaled)
         responses = np.stack(
-            [cv.resize(r, response_size, interpolation=cv.INTER_CUBIC)
+            [cv.resize(r, response_size_upscaled, interpolation=cv.INTER_CUBIC)
              for r in responses])
         
         peak_scale_pos = np.argmax(np.amax(responses, axis=(1, 2)))
-        response = responses[peak_scale_pos]
+        peak_scale = self.search_scales[peak_scale_pos]
         
+        response = responses[peak_scale_pos]
         response -= response.min()
         response /= response.sum() + 1e-16
         response = (1 - self.cfg.cosine_win_influence) * response +\
-                   self.cfg.cosine_win_influence * self.hanning
+                   self.cfg.cosine_win_influence * self.cosine_win
         
+        # The assumption is that the peak response value is in the center of the
+        # response map. Thus, we compute the change with respect to the center
+        # and convert it back to the pixel coordinates in the image.
+        peak_response_pos = np.unravel_index(response.argmax(), response.shape)
+        disp_in_response = peak_response_pos - self.response_size_upscaled // 2
+        disp_in_instance = disp_in_response *\
+                           (self.cfg.total_stride / self.cfg.response_upscale)
+        disp_in_image = disp_in_instance * self.target_bbox.center *\
+                        (peak_scale / self.cfg.instance_size)
+        self.target_bbox.shift(disp_in_image)
+        
+        # Update target scale.
+        new_scale = (1 - self.cfg.scale_damping) * 1.0 +\
+                    (self.cfg.scale_damping * peak_scale)
+        self.curr_instance_side_size *= new_scale
+        self.target_bbox.rescale(new_scale, new_scale)
+        
+        return self.target_bbox.as_xywh()
     
-    def iter_scaled_instance_bboxes(self) -> Iterable[np.ndarray]:
-        bbox_size = self.instance_bbox[2:]
-        bbox_center = self.instance_bbox[:2] + bbox_size / 2
+    def iter_target_centered_scaled_instance_bboxes(self) -> Iterable[BBox]:
+        size = np.asarray(
+            self.curr_instance_side_size, self.curr_instance_side_size)
+        bbox = BBox.build_from_center_and_size(self.target_bbox.center, size)
+        
         for scale in self.search_scales:
-            yield bbox_from_center_and_size(bbox_center, bbox_size * scale)
+            yield bbox.rescale(scale, scale, in_place=False)
+    
+    @staticmethod
+    def create_square_cosine_window(size: int) -> np.ndarray:
+        assert size > 0
+
+        # Create a normalized cosine (Hanning) window.
+        hanning_1d = np.hanning(size)
+        hanning_2d = np.outer(hanning_1d, hanning_1d)
+        hanning_2d /= np.sum(hanning_2d)
+    
+        return hanning_2d
+    
+    @staticmethod
+    def create_search_scales(scale_step: float, count: int) -> np.ndarray:
+        assert count > 0
+
+        n_half_search_scales = count // 2
+        search_scales = scale_step ** np.linspace(
+            -n_half_search_scales, n_half_search_scales, count)
+        
+        return search_scales
+    
+    @staticmethod
+    def create_exponential_lr_scheduler(
+            optimizer, initial_lr: float, ultimate_lr: float,
+            n_epochs: int) -> optim.lr_scheduler.ExponentialLR:
+        assert n_epochs > 0
+        
+        # Learning rate is geometrically annealed at each epoch. Starting from
+        # A and terminating at B, then the known gamma factor x for n epochs
+        # is computed as
+        #         A * x ^ n = B,
+        #                 x = (B / A)^(1 / n).
+        gamma = np.power(ultimate_lr / initial_lr, 1.0 / n_epochs)
+        lr_scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma)
+        
+        return lr_scheduler
