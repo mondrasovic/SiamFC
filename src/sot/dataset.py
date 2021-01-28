@@ -196,12 +196,12 @@ class SiamesePairwiseDataset(Dataset):
     def __len__(self) -> int:
         return len(self.data_seq) * self.cfg.pairs_per_seq
     
-    def sample_pair_indices(self, count: int) -> Tuple[int, int]:
-        assert count > 0
+    def sample_pair_indices(self, n_items: int) -> Tuple[int, int]:
+        assert n_items > 0
         
-        max_distance = min(count - 1, self.cfg.max_pair_dist)
+        max_distance = min(n_items - 1, self.cfg.max_pair_dist)
         rand_indices = np.random.choice(max_distance + 1, 2)
-        rand_start = np.random.randint(count - max_distance)
+        rand_start = np.random.randint(n_items - max_distance)
         return rand_indices + rand_start
     
     @staticmethod

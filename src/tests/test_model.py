@@ -2,12 +2,12 @@ import unittest
 
 import torch
 
-from sot.model import SiamFC
+from sot.model import SiamFCModel
 
 
 class TestSiamFCModel(unittest.TestCase):
     def setUp(self) -> None:
-        self.model = SiamFC()
+        self.model = SiamFCModel()
     
     def test_feature_extraction_exemplar_shape(self):
         exemplar_img = torch.ones((1, 3, 127, 127))
@@ -57,7 +57,7 @@ class TestSiamFCModel(unittest.TestCase):
         self.assertEqual(list(response_map.shape), [10, 1, 17, 17])
     
     def test_cross_correlation_invalid_shapes(self):
-        with self.assertRaises(ValueError):
+        with self.assertRaises(AssertionError):
             exemplar_emb = torch.ones((1, 1, 1))
             instance_emb = torch.ones(1, 10, 5, 5)
             self.model.cross_corr(exemplar_emb, instance_emb)

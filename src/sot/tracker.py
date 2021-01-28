@@ -1,12 +1,11 @@
 import torch
 import cv2 as cv
 import numpy as np
-from torch import optim
 
-from typing import Optional, Iterable
+from typing import Optional, Iterable, Union
 
 from sot.cfg import TrackerConfig
-from model import SiamFC
+from model import SiamFCModel
 from utils import (
     center_crop_and_resize, cv_img_to_tensor, calc_bbox_side_size_with_context)
 from bbox import BBox
@@ -14,35 +13,27 @@ from bbox import BBox
 
 class TrackerSiamFC:
     def __init__(
-            self, config: TrackerConfig,
+            self, cfg: TrackerConfig, device: Union[torch.device, str],
             model_path: Optional[str] = None) -> None:
-        self.cfg: TrackerConfig = config
-        self.device: torch.device = torch.device(
-            'cuda' if torch.cuda.is_available() else 'cpu')
+        self.cfg: TrackerConfig = cfg
         
-        self.model: SiamFC = SiamFC()
+        if isinstance(device, torch.device):
+            self.device: torch.device = device
+        else:
+            self.device: torch.device = torch.device(device)
+        
+        self.model: SiamFCModel = SiamFCModel()
         if model_path is not None:
             self.model.load_state_dict(
                 torch.load(
                     model_path, map_location=lambda storage, location: storage))
         self.model = self.model.to(self.device)
         
-        self.optimizer = optim.SGD(
-            self.model.parameters(), lr=self.cfg.initial_lr,
-            weight_decay=self.cfg.weight_decay, momentum=self.cfg.momentum)
-        self.criterion = None
-        
-        self.lr_scheduler = self.create_exponential_lr_scheduler(
-            self.optimizer, self.cfg.initial_lr, self.cfg.ultimate_lr,
-            self.cfg.n_epochs)
-        
         self.response_size_upscaled: int =\
             self.cfg.response_size * self.cfg.response_upscale
         self.cosine_win: np.ndarray = self.create_square_cosine_window(
             self.response_size_upscaled)
         
-        # Search for the object over multiple different scales
-        # (smaller and bigger).
         self.search_scales: np.ndarray = self.create_search_scales(
             self.cfg.scale_step, self.cfg.n_scales)
 
@@ -55,8 +46,6 @@ class TrackerSiamFC:
     def init(self, img: np.ndarray, bbox: np.ndarray) -> None:
         assert img.ndim == 3
         assert (len(bbox) == 4) and (bbox.ndim == 1)
-        
-        self.model.eval()
 
         # Exemplar and instance (search) sizes.
         # The endeavor is to resize the image so that the bounding box plus the
@@ -82,7 +71,8 @@ class TrackerSiamFC:
         exemplar_img = center_crop_and_resize(
             img, exemplar_bbox,
             (self.cfg.exemplar_size, self.cfg.exemplar_size))
-        
+
+        self.model.eval()
         exemplar_img_tensor = cv_img_to_tensor(exemplar_img, self.device)
         self.exemplar_emb: torch.Tensor = self.model.extract_visual_features(
             exemplar_img_tensor)
@@ -92,17 +82,21 @@ class TrackerSiamFC:
         assert img.ndim == 3
         
         img = cv.cvtColor(img, cv.COLOR_BGR2RGB)
+
+        # Search for the object over multiple different scales
+        # (smaller and bigger).
         instance_size = (self.cfg.instance_size, self.cfg.instance_size)
         instances_imgs = [
             center_crop_and_resize(img, bbox, instance_size)
             for bbox in self.iter_target_centered_scaled_instance_bboxes()]
         instances_imgs = np.stack(instances_imgs, axis=0)
         
-        instances_imgs_tensor = cv_img_to_tensor(instances_imgs, self.device)
         self.model.eval()
+        instances_imgs_tensor = cv_img_to_tensor(instances_imgs, self.device)
         instances_features = self.model.extract_visual_features(
             instances_imgs_tensor)
         
+        # TODO Maybe the exemplar lacks the dimension so it should be repeated.
         responses = self.model.calc_response_map(
             self.exemplar_emb, instances_features)
         # Remove the channel dimension, as it is just 1.
@@ -170,19 +164,3 @@ class TrackerSiamFC:
             -n_half_search_scales, n_half_search_scales, count)
         
         return search_scales
-    
-    @staticmethod
-    def create_exponential_lr_scheduler(
-            optimizer, initial_lr: float, ultimate_lr: float,
-            n_epochs: int) -> optim.lr_scheduler.ExponentialLR:
-        assert n_epochs > 0
-        
-        # Learning rate is geometrically annealed at each epoch. Starting from
-        # A and terminating at B, then the known gamma factor x for n epochs
-        # is computed as
-        #         A * x ^ n = B,
-        #                 x = (B / A)^(1 / n).
-        gamma = np.power(ultimate_lr / initial_lr, 1.0 / n_epochs)
-        lr_scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma)
-        
-        return lr_scheduler

@@ -25,12 +25,11 @@ class _ConvBlock(nn.Module):
         return self.block(x)
 
 
-class SiamFC(nn.Module):
+class SiamFCModel(nn.Module):
     def __init__(self, response_map_scale: float = 0.001) -> None:
         super().__init__()
         
-        if response_map_scale <0:
-            raise ValueError('response map scale must be positive')
+        assert response_map_scale > 0, "response map scale must be positive"
         
         self.response_map_scale: float = response_map_scale
         
@@ -70,11 +69,8 @@ class SiamFC(nn.Module):
     def cross_corr(
             exemplar_emb: torch.Tensor,
             instance_emb: torch.Tensor) -> torch.Tensor:
-        if (exemplar_emb.ndim != instance_emb.ndim) or (exemplar_emb.ndim != 4):
-            raise ValueError(
-                f'exemplar and instance need to have exactly 4 dimensions, '
-                f'got {exemplar_emb.ndim} and {instance_emb.ndim}, '
-                f'respectively')
+        assert exemplar_emb.ndim == instance_emb.ndim
+        assert exemplar_emb.ndim == 4
 
         n_instances, instance_c, instance_h, instance_w = instance_emb.shape
 

@@ -4,7 +4,7 @@ import dataclasses
 @dataclasses.dataclass(frozen=True)
 class TrackerConfig:
     # Training parameters.
-    n_epochs: int = 50
+    n_epochs: int = 10
     batch_size: int = 8
     
     # Optimizer parameters.
@@ -29,6 +29,8 @@ class TrackerConfig:
     cosine_win_influence = 0.176
     
     total_stride = 8
+    
+    positive_class_radius = 16
     
     # Upscale coefficient for the response
     # map. Authors chose to upscale the
