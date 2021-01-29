@@ -27,6 +27,10 @@ class TestBBox(unittest.TestCase):
         with self.assertRaises(AssertionError):
             self.bbox.size = np.asarray((-10, 100))
     
+    def test_set_size_float(self):
+        with self.assertRaises(AssertionError):
+            self.bbox.size = np.asarray((10.0, 100.0))
+    
     def test_corners_calculation(self):
         self.assertEqual(self.bbox.as_corners().tolist(), [10, 20, 310, 420])
     
@@ -40,7 +44,7 @@ class TestBBox(unittest.TestCase):
     def test_negative_height_scale_factor(self):
         with self.assertRaises(AssertionError):
             self.bbox.rescale(0.5, -2)
-
+    
     def test_center_shift(self):
         bbox_shifted = self.bbox.shift(np.asarray((100, -100)), in_place=False)
         
@@ -51,6 +55,10 @@ class TestBBox(unittest.TestCase):
         
         self.assertTrue(bbox_shifted is None)
         self.assertEqual(self.bbox.center.tolist(), [260, 120])
+    
+    def test_float_center_shift(self):
+        with self.assertRaises(AssertionError):
+            self.bbox.shift(np.asarray((2.0, -5.5)))
     
     def test_upscale_twice(self):
         scale = 2
@@ -69,21 +77,21 @@ class TestBBox(unittest.TestCase):
         bbox_rescaled = self.bbox.rescale(scale, scale, in_place=False)
         
         self.assertEqual(bbox_rescaled.size.tolist(), [300, 400])
-
+    
     def test_upscale_twice_inplace(self):
         scale = 2
         bbox_rescaled = self.bbox.rescale(scale, scale, in_place=True)
         
         self.assertTrue(bbox_rescaled is None)
         self.assertEqual(self.bbox.size.tolist(), [600, 800])
-
+    
     def test_downscale_twice_inplace(self):
         scale = 0.5
         bbox_rescaled = self.bbox.rescale(scale, scale, in_place=True)
         
         self.assertTrue(bbox_rescaled is None)
         self.assertEqual(self.bbox.size.tolist(), [150, 200])
-
+    
     def test_no_scale_change_inplace(self):
         scale = 1
         bbox_rescaled = self.bbox.rescale(scale, scale, in_place=True)
@@ -93,7 +101,7 @@ class TestBBox(unittest.TestCase):
     
     def test_repr(self):
         self.assertEqual(self.bbox.__repr__(), 'BBox(10,20,300,400)')
-        
+
 
 if __name__ == '__main__':
     unittest.main()

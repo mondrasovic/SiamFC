@@ -1,14 +1,15 @@
-import torch
+from typing import Iterable, Optional, Union
+
 import cv2 as cv
 import numpy as np
+import torch
 
-from typing import Optional, Iterable, Union
-
-from sot.cfg import TrackerConfig
-from model import SiamFCModel
-from utils import (
-    center_crop_and_resize, cv_img_to_tensor, calc_bbox_side_size_with_context)
 from bbox import BBox
+from model import SiamFCModel
+from sot.cfg import TrackerConfig
+from utils import (
+    calc_bbox_side_size_with_context, center_crop_and_resize, cv_img_to_tensor,
+)
 
 
 class TrackerSiamFC:
@@ -29,14 +30,14 @@ class TrackerSiamFC:
                     model_path, map_location=lambda storage, location: storage))
         self.model = self.model.to(self.device)
         
-        self.response_size_upscaled: int =\
+        self.response_size_upscaled: int = \
             self.cfg.response_size * self.cfg.response_upscale
         self.cosine_win: np.ndarray = self.create_square_cosine_window(
             self.response_size_upscaled)
         
         self.search_scales: np.ndarray = self.create_search_scales(
             self.cfg.scale_step, self.cfg.n_scales)
-
+        
         self.curr_instance_side_size: int = self.cfg.instance_size
         
         self.target_bbox = None
@@ -46,7 +47,7 @@ class TrackerSiamFC:
     def init(self, img: np.ndarray, bbox: np.ndarray) -> None:
         assert img.ndim == 3
         assert (len(bbox) == 4) and (bbox.ndim == 1)
-
+        
         # Exemplar and instance (search) sizes.
         # The endeavor is to resize the image so that the bounding box plus the
         # margin have a fixed area. In the original paper, the constraint was
@@ -63,7 +64,8 @@ class TrackerSiamFC:
         self.curr_instance_side_size = calc_bbox_side_size_with_context(
             self.target_bbox)
         size_ratio = self.cfg.exemplar_size / self.cfg.instance_size
-        exemplar_side_size = self.curr_instance_side_size * size_ratio
+        exemplar_side_size = int(round(
+            self.curr_instance_side_size * size_ratio))
         
         exemplar_bbox = BBox.build_from_center_and_size(
             self.target_bbox.center,
@@ -71,18 +73,20 @@ class TrackerSiamFC:
         exemplar_img = center_crop_and_resize(
             img, exemplar_bbox,
             (self.cfg.exemplar_size, self.cfg.exemplar_size))
-
+        
         self.model.eval()
         exemplar_img_tensor = cv_img_to_tensor(exemplar_img, self.device)
-        self.exemplar_emb: torch.Tensor = self.model.extract_visual_features(
+        self.exemplar_emb = self.model.extract_visual_features(
             exemplar_img_tensor)
+        # Copy the exemplar as many times as we have scale factors. Since we
+        # employ the trick with grouped convolutions, the embedding vector needs
+        # to be present for each group.
+        self.exemplar_emb = self.exemplar_emb.repeat(self.cfg.n_scales, 1, 1, 1)
     
     @torch.no_grad()
     def update(self, img: np.ndarray) -> np.ndarray:
         assert img.ndim == 3
         
-        img = cv.cvtColor(img, cv.COLOR_BGR2RGB)
-
         # Search for the object over multiple different scales
         # (smaller and bigger).
         instance_size = (self.cfg.instance_size, self.cfg.instance_size)
@@ -114,22 +118,24 @@ class TrackerSiamFC:
         response = responses[peak_scale_pos]
         response -= response.min()
         response /= response.sum() + 1e-16
-        response = (1 - self.cfg.cosine_win_influence) * response +\
+        response = (1 - self.cfg.cosine_win_influence) * response + \
                    self.cfg.cosine_win_influence * self.cosine_win
         
         # The assumption is that the peak response value is in the center of the
         # response map. Thus, we compute the change with respect to the center
         # and convert it back to the pixel coordinates in the image.
-        peak_response_pos = np.unravel_index(response.argmax(), response.shape)
+        peak_response_pos = np.asarray(
+            np.unravel_index(response.argmax(), response.shape))
         disp_in_response = peak_response_pos - self.response_size_upscaled // 2
-        disp_in_instance = disp_in_response *\
+        disp_in_instance = disp_in_response * \
                            (self.cfg.total_stride / self.cfg.response_upscale)
-        disp_in_image = disp_in_instance * self.target_bbox.center *\
+        disp_in_image = disp_in_instance * self.target_bbox.center * \
                         (peak_scale / self.cfg.instance_size)
+        disp_in_image = disp_in_image.round().astype(np.int)
         self.target_bbox.shift(disp_in_image)
         
         # Update target scale.
-        new_scale = (1 - self.cfg.scale_damping) * 1.0 +\
+        new_scale = (1 - self.cfg.scale_damping) * 1.0 + \
                     (self.cfg.scale_damping * peak_scale)
         self.curr_instance_side_size *= new_scale
         self.target_bbox.rescale(new_scale, new_scale)
@@ -137,8 +143,8 @@ class TrackerSiamFC:
         return self.target_bbox.as_xywh()
     
     def iter_target_centered_scaled_instance_bboxes(self) -> Iterable[BBox]:
-        size = np.asarray(
-            self.curr_instance_side_size, self.curr_instance_side_size)
+        side_size = int(round(self.curr_instance_side_size))
+        size = np.asarray((side_size, side_size))
         bbox = BBox.build_from_center_and_size(self.target_bbox.center, size)
         
         for scale in self.search_scales:
@@ -147,18 +153,18 @@ class TrackerSiamFC:
     @staticmethod
     def create_square_cosine_window(size: int) -> np.ndarray:
         assert size > 0
-
+        
         # Create a normalized cosine (Hanning) window.
         hanning_1d = np.hanning(size)
         hanning_2d = np.outer(hanning_1d, hanning_1d)
         hanning_2d /= np.sum(hanning_2d)
-    
+        
         return hanning_2d
     
     @staticmethod
     def create_search_scales(scale_step: float, count: int) -> np.ndarray:
         assert count > 0
-
+        
         n_half_search_scales = count // 2
         search_scales = scale_step ** np.linspace(
             -n_half_search_scales, n_half_search_scales, count)

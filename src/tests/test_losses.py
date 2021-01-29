@@ -2,8 +2,8 @@ import unittest
 
 import torch
 
-from sot.utils import create_ground_truth_mask_and_weight
 from sot.losses import WeightedBCELoss
+from sot.utils import create_ground_truth_mask_and_weight
 
 
 class TestLossFunction(unittest.TestCase):
@@ -14,7 +14,7 @@ class TestLossFunction(unittest.TestCase):
         size = (self.RESPONSE_MAP_SIZE, self.RESPONSE_MAP_SIZE)
         radius = self.RESPONSE_MAP_SIZE / 4
         total_stride = 8
-    
+        
         mask_mat, weight_mat = create_ground_truth_mask_and_weight(
             size, radius, total_stride, self.BATCH_SIZE)
         

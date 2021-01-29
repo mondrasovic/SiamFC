@@ -1,6 +1,7 @@
-import numpy as np
-
+import numbers
 from typing import Optional
+
+import numpy as np
 
 
 class BBox:
@@ -22,12 +23,16 @@ class BBox:
     def size(self, new_size: np.ndarray) -> None:
         assert (new_size.ndim == 1) and (len(new_size) == 2)
         assert new_size.min() >= 0, "width and height must be non-negative"
+        assert issubclass(new_size.dtype.type, numbers.Integral)
         
         self._size = new_size
     
     @staticmethod
     def build_from_center_and_size(
             center: np.ndarray, size: np.ndarray) -> 'BBox':
+        assert issubclass(center.dtype.type, numbers.Integral)
+        assert issubclass(size.dtype.type, numbers.Integral)
+        
         x, y = center - size // 2
         return BBox(x, y, *size)
     
@@ -42,6 +47,7 @@ class BBox:
     def shift(
             self, center_shift: np.ndarray, in_place=True) -> Optional['BBox']:
         assert (center_shift.ndim == 1) and (len(center_shift) == 2)
+        assert issubclass(center_shift.dtype.type, numbers.Integral)
         
         new_center = self._center + center_shift
         if in_place:
@@ -53,7 +59,7 @@ class BBox:
     def rescale(
             self, width_scale: float, height_scale: float,
             in_place=True) -> Optional['BBox']:
-        assert min(width_scale, height_scale) >= 0,\
+        assert min(width_scale, height_scale) >= 0, \
             "width and height scale factors must be non-negative"
         
         new_size = self.size * np.array((width_scale, height_scale))

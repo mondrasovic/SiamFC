@@ -1,25 +1,24 @@
-import os
 import abc
-import pickle
-import pathlib
-import dataclasses
 import collections
+import dataclasses
+import os
+import pathlib
+import pickle
 import xml.etree.ElementTree as ET
+from typing import (
+    Callable, DefaultDict, Dict, Iterable, List, Optional, Sequence, Tuple,
+    Union,
+)
 
 import cv2 as cv
 import numpy as np
 import torch
-
-from typing import (
-    Sequence, Iterable, Tuple, Union, Optional, DefaultDict, List, Callable,
-    Dict)
-
 from torch.utils.data import Dataset
 from torchvision.transforms import Compose, ToTensor
 
 from sot.bbox import BBox
 from sot.cfg import TrackerConfig
-from sot.utils import center_crop_and_resize, calc_bbox_side_size_with_context
+from sot.utils import calc_bbox_side_size_with_context, center_crop_and_resize
 
 
 @dataclasses.dataclass(frozen=True)
@@ -40,7 +39,7 @@ class TrackingDataset:
         img_file_paths = tuple(self.read_img_file_paths(track_id))
         annos = self.read_annotations(track_id)
         return img_file_paths, annos
-        
+    
     def __len__(self) -> int:
         return len(self.track_ids)
     
@@ -71,7 +70,7 @@ class ImageNetVideoDataset(TrackingDataset):
         assert all(subset in ('train', 'val', 'test') for subset in subsets)
         
         self.subsets: Sequence[str] = subsets
-        self.track_data: DefaultDict[str, List[TrackData]] =\
+        self.track_data: DefaultDict[str, List[TrackData]] = \
             collections.defaultdict(list)
     
     def read_track_ids(self) -> Iterable[str]:
@@ -104,15 +103,15 @@ class ImageNetVideoDataset(TrackingDataset):
                             self.track_data[track_id_ex].append(track_data)
             else:  # 'test'
                 test_data_dir = root_dir / 'Data' / 'VID' / 'test'
-                for track_id, img_file_path in\
+                for track_id, img_file_path in \
                         self._read_test_track_ids_and_img_paths(test_data_dir):
                     track_data = TrackData(img_file_path, None)
                     self.track_data[track_id].append(track_data)
         return self.track_data.keys()
-
+    
     def read_img_file_paths(self, track_id: str) -> Iterable[str]:
         return (data.img_file_path for data in self.track_data[track_id])
-
+    
     def read_annotations(self, track_id) -> np.ndarray:
         annos = [data.bbox.as_xywh() for data in self.track_data[track_id]]
         return np.array(annos, dtype=np.int)
@@ -147,9 +146,9 @@ class ImageNetVideoDataset(TrackingDataset):
 class OTBDataset(TrackingDataset):
     def __init__(self, root_dir_path: str) -> None:
         super().__init__('OTB2013', root_dir_path)
-
+        
         self.track_data: Dict[str, List[TrackData]] = {}
-
+    
     def read_track_ids(self) -> Iterable[str]:
         root_dir = pathlib.Path(self.root_dir_path)
         
@@ -172,7 +171,7 @@ class OTBDataset(TrackingDataset):
                 track_data_list = []
                 for img_file_path, bbox in zip(img_file_paths, bboxes):
                     track_data_list.append(TrackData(img_file_path, bbox))
-                    
+                
                 track_id = track_dir.name
                 self.track_data[track_id] = track_data_list
         
@@ -180,7 +179,7 @@ class OTBDataset(TrackingDataset):
     
     def read_img_file_paths(self, track_id: str) -> Iterable[str]:
         return (data.img_file_path for data in self.track_data[track_id])
-
+    
     def read_annotations(self, track_id) -> np.ndarray:
         annos = [data.bbox.as_xywh() for data in self.track_data[track_id]]
         return np.array(annos, dtype=np.int)
@@ -197,7 +196,7 @@ PairItemT = Tuple[torch.Tensor, torch.Tensor]
 class SiamesePairwiseDataset(Dataset):
     def __init__(self, data_seq: Sequence, cfg: TrackerConfig) -> None:
         super().__init__()
-
+        
         self.data_seq: Sequence = data_seq
         self.cfg: TrackerConfig = cfg
         
@@ -225,7 +224,7 @@ class SiamesePairwiseDataset(Dataset):
         exemplar_anno = valid_annos[exemplar_idx]
         instance_img_path = valid_img_files[instance_idx]
         instance_anno = valid_annos[instance_idx]
-
+        
         size_ratio = self.cfg.exemplar_size / self.cfg.instance_size
         assert self.cfg.exemplar_size < self.cfg.instance_size
         exemplar_img = self.read_image_and_transform(

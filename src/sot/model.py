@@ -19,9 +19,9 @@ class _ConvBlock(nn.Module):
         
         if max_pool:
             modules.append(nn.MaxPool2d(kernel_size=3, stride=2))
-
+        
         self.block = nn.Sequential(*modules)
-
+    
     def forward(self, x):
         return self.block(x)
 
@@ -42,8 +42,8 @@ class SiamFCModel(nn.Module):
             max_pool=True)
         self.conv3 = _ConvBlock(in_channels=256, out_channels=384)
         self.conv4 = _ConvBlock(in_channels=384, out_channels=384)
-        self.conv5 = _ConvBlock(in_channels=384, out_channels=32, groups=2)
-        
+        self.conv5 = _ConvBlock(in_channels=384, out_channels=256, groups=2)
+    
     def forward(
             self, exemplar: torch.Tensor,
             instance: torch.Tensor) -> torch.Tensor:
@@ -72,13 +72,13 @@ class SiamFCModel(nn.Module):
             instance_emb: torch.Tensor) -> torch.Tensor:
         assert exemplar_emb.ndim == instance_emb.ndim
         assert exemplar_emb.ndim == 4
-
+        
         n_instances, instance_c, instance_h, instance_w = instance_emb.shape
-
-        instance_emb = instance_emb.view(1, -1, instance_h, instance_w)
+        
+        instance_emb = instance_emb.reshape(1, -1, instance_h, instance_w)
         response_map = F.conv2d(
             input=instance_emb, weight=exemplar_emb, groups=n_instances)
-        response_map = response_map.view(
+        response_map = response_map.reshape(
             n_instances, -1, response_map.shape[-2], response_map.shape[-1])
         
         return response_map

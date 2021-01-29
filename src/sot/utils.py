@@ -1,12 +1,12 @@
-import torch
+from typing import Optional, Tuple, Union
+
 import cv2 as cv
 import numpy as np
-
-from typing import Union, Tuple, Optional
-
+import torch
 from PIL import Image
 
 from sot.bbox import BBox
+
 
 SizeT = Union[np.ndarray, Tuple[int, int]]
 
@@ -28,7 +28,7 @@ def center_crop_and_resize(
     img_size = (img.shape[1], img.shape[0])
     paddings = np.concatenate((-bbox_corners[:2], bbox_corners[2:] - img_size))
     max_padding = np.maximum(paddings, 0).max()
-
+    
     if max_padding > 0:
         if border is None:
             border = tuple(int(c) for c in np.mean(img, axis=(0, 1)).round())
@@ -37,11 +37,11 @@ def center_crop_and_resize(
             img, max_padding, max_padding, max_padding, max_padding,
             borderType=cv.BORDER_CONSTANT, value=border)
         bbox_corners += max_padding
-
+    
     patch = img[
             bbox_corners[1]:bbox_corners[3], bbox_corners[0]:bbox_corners[2]]
     patch = cv.resize(patch, dsize=target_size, interpolation=interpolation)
-
+    
     return patch
 
 
@@ -96,6 +96,6 @@ def cv_img_to_tensor(
     
     if tensor.ndim == 3:  # A single image (height, width, channels).
         tensor = tensor.unsqueeze(0)  # Add batch dimension.
-
+    
     # Swap channels to get [batch_size, channels, height, width].
     return tensor.permute(0, 3, 1, 2).float()

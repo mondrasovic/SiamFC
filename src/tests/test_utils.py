@@ -1,12 +1,13 @@
 import unittest
 
-import torch
 import numpy as np
+import torch
 
 from sot.bbox import BBox
 from sot.utils import (
-    center_crop_and_resize, cv_img_to_tensor,
-    create_ground_truth_mask_and_weight)
+    center_crop_and_resize, create_ground_truth_mask_and_weight,
+    cv_img_to_tensor,
+)
 
 
 class TestCenterCropAndResize(unittest.TestCase):
@@ -53,7 +54,7 @@ class TestCvImgToTensor(unittest.TestCase):
     def setUp(self) -> None:
         width, height = 800, 600
         self.img = np.full((height, width, 3), self.PIX_VALUE, dtype=np.uint8)
-        
+    
     def test_wrong_n_dims_one_dim(self):
         with self.assertRaises(AssertionError):
             cv_img_to_tensor(np.ones(10))
