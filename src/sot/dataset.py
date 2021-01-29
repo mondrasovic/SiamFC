@@ -11,7 +11,8 @@ import numpy as np
 import torch
 
 from typing import (
-    Sequence, Iterable, Tuple, Union, Optional, DefaultDict, List, Callable)
+    Sequence, Iterable, Tuple, Union, Optional, DefaultDict, List, Callable,
+    Dict)
 
 from torch.utils.data import Dataset
 from torchvision.transforms import Compose, ToTensor
@@ -143,8 +144,51 @@ class ImageNetVideoDataset(TrackingDataset):
                 yield track_id, str(img_file)
 
 
-class OTBDataset:
-    pass
+class OTBDataset(TrackingDataset):
+    def __init__(self, root_dir_path: str) -> None:
+        super().__init__('OTB2013', root_dir_path)
+
+        self.track_data: Dict[str, List[TrackData]] = {}
+
+    def read_track_ids(self) -> Iterable[str]:
+        root_dir = pathlib.Path(self.root_dir_path)
+        
+        for track_dir in root_dir.iterdir():
+            if not track_dir.is_dir():
+                continue
+            
+            imgs_dir = track_dir / 'img'
+            bboxes_file = track_dir / 'groundtruth_rect.txt'
+            if not bboxes_file.exists():  # TODO Incorporate both tracks.
+                bboxes_file = track_dir / 'groundtruth_rect.1.txt'
+            
+            with open(str(bboxes_file), 'rt') as bboxes_file:
+                img_file_paths = (
+                    str(img_file) for img_file in imgs_dir.iterdir())
+                bboxes = (
+                    self.create_bbox_from_str(line)
+                    for line in bboxes_file.readlines())
+                
+                track_data_list = []
+                for img_file_path, bbox in zip(img_file_paths, bboxes):
+                    track_data_list.append(TrackData(img_file_path, bbox))
+                    
+                track_id = track_dir.name
+                self.track_data[track_id] = track_data_list
+        
+        return self.track_data.keys()
+    
+    def read_img_file_paths(self, track_id: str) -> Iterable[str]:
+        return (data.img_file_path for data in self.track_data[track_id])
+
+    def read_annotations(self, track_id) -> np.ndarray:
+        annos = [data.bbox.as_xywh() for data in self.track_data[track_id]]
+        return np.array(annos, dtype=np.int)
+    
+    @staticmethod
+    def create_bbox_from_str(bbox_str: str) -> BBox:
+        sep = ',' if ',' in bbox_str else '\t'
+        return BBox(*tuple(map(int, bbox_str.split(sep))))
 
 
 PairItemT = Tuple[torch.Tensor, torch.Tensor]
@@ -241,9 +285,11 @@ if __name__ == '__main__':
         with open(str(cache_file), 'rb') as in_file:
             data_seq = pickle.load(in_file)
     else:
-        dataset_path = '../../../../datasets/ILSVRC2015_VID_small'
-        data_seq = build_dataset_and_init(
-            ImageNetVideoDataset, dataset_path, 'train')
+        # dataset_path = '../../../../datasets/ILSVRC2015_VID_small'
+        # data_seq = build_dataset_and_init(
+        #     OTBDataset, dataset_path, 'train')
+        dataset_path = '../../../../datasets/OTB_2013'
+        data_seq = build_dataset_and_init(OTBDataset, dataset_path)
         with open(str(cache_file), 'wb') as out_file:
             pickle.dump(data_seq, out_file, protocol=pickle.HIGHEST_PROTOCOL)
     

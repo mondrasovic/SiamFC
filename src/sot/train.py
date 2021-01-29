@@ -4,7 +4,6 @@ import pathlib
 import multiprocessing
 
 import torch
-import torch.nn.functional as F
 
 import numpy as np
 
@@ -28,13 +27,11 @@ class SiamFCTrainer:
         
         self.tracker: TrackerSiamFC = TrackerSiamFC(cfg, self.device)
 
-        self.response_map_size_upscaled = (
-            self.tracker.response_size_upscaled,
-            self.tracker.response_size_upscaled)
+        response_map_size = (self.cfg.response_size, self.cfg.response_size)
         mask_mat, weight_mat = create_ground_truth_mask_and_weight(
-            self.response_map_size_upscaled, self.cfg.positive_class_radius,
+            response_map_size, self.cfg.positive_class_radius,
             self.cfg.total_stride, self.cfg.batch_size)
-        
+        print(mask_mat)
         self.mask_mat = torch.from_numpy(mask_mat).float().to(self.device)
         weight_mat = torch.from_numpy(weight_mat).float()
         
@@ -65,9 +62,6 @@ class SiamFCTrainer:
                 
                 self.optimizer.zero_grad()
                 pred_response_maps = self.tracker.model(exemplar, instance)
-                pred_response_maps = F.interpolate(
-                    pred_response_maps, self.response_map_size_upscaled,
-                    mode='bicubic')
                 
                 loss = self.criterion(pred_response_maps, self.mask_mat)
                 loss.backward()

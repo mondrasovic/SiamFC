@@ -12,8 +12,9 @@ class _ConvBlock(nn.Module):
         modules = [
             nn.Conv2d(
                 in_channels=in_channels, out_channels=out_channels,
-                kernel_size=kernel_size, stride=stride, groups=groups),
-            nn.BatchNorm2d(num_features=out_channels, eps=1.e-6, momentum=0.05),
+                kernel_size=kernel_size, stride=stride, groups=groups,
+                bias=True),
+            nn.BatchNorm2d(num_features=out_channels),
             nn.ReLU(inplace=True)]
         
         if max_pool:
@@ -41,7 +42,7 @@ class SiamFCModel(nn.Module):
             max_pool=True)
         self.conv3 = _ConvBlock(in_channels=256, out_channels=384)
         self.conv4 = _ConvBlock(in_channels=384, out_channels=384)
-        self.conv5 = _ConvBlock(in_channels=384, out_channels=256, groups=2)
+        self.conv5 = _ConvBlock(in_channels=384, out_channels=32, groups=2)
         
     def forward(
             self, exemplar: torch.Tensor,
