@@ -52,7 +52,6 @@ def main(imgs_dir_path: Optional[str]) -> int:
             is_first = False
         else:
             bbox_pred = tracker.update(frame)
-            print(bbox_pred)
             pt1 = tuple(bbox_pred[:2])
             pt2 = tuple(bbox_pred[:2] + bbox_pred[2:])
             cv.rectangle(frame, pt1, pt2, (0, 255, 0), 3, cv.LINE_AA)

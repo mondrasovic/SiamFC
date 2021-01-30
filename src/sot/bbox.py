@@ -1,5 +1,6 @@
 import numbers
-from typing import Optional
+
+from typing import Optional, Tuple
 
 import numpy as np
 
@@ -43,6 +44,12 @@ class BBox:
     def as_xywh(self) -> np.ndarray:
         xy = self.center - self.size // 2
         return np.concatenate((xy, self.size))
+    
+    def as_tl_br(self) -> Tuple[np.ndarray, np.ndarray]:
+        size_half = self.size // 2
+        tl = self.center - size_half
+        br = self.center + size_half
+        return tl, br
     
     def shift(
             self, center_shift: np.ndarray, in_place=True) -> Optional['BBox']:

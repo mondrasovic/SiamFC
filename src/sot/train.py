@@ -12,7 +12,7 @@ from torch.utils.data import DataLoader
 from sot.cfg import TrackerConfig
 from sot.dataset import (
     build_dataset_and_init, OTBDataset,
-    SiamesePairwiseDataset,
+    SiamesePairwiseDataset, ImageNetVideoDataset
 )
 from sot.losses import WeightedBCELoss
 from sot.tracker import TrackerSiamFC
@@ -81,10 +81,10 @@ class SiamFCTrainer:
             with open(str(cache_file), 'rb') as in_file:
                 data_seq = pickle.load(in_file)
         else:
-            # dataset_path = '../../../../datasets/ILSVRC2015_VID_small'
+            # dataset_path = '../../../../datasets/ILSVRC2015_VID'
             # data_seq = build_dataset_and_init(
             #     ImageNetVideoDataset, dataset_path, 'train')
-            dataset_path = '../../../../datasets/OTB_2013'
+            dataset_path = '../../../../datasets/OTB_2013_small'
             data_seq = build_dataset_and_init(OTBDataset, dataset_path)
             with open(str(cache_file), 'wb') as out_file:
                 pickle.dump(data_seq, out_file,
@@ -113,6 +113,7 @@ class SiamFCTrainer:
 
 @click.command()
 def main() -> int:
+    np.random.seed(731995)
     cfg = TrackerConfig()
     trainer = SiamFCTrainer(cfg)
     trainer.run()

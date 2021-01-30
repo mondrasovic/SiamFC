@@ -34,6 +34,12 @@ class TestBBox(unittest.TestCase):
     def test_corners_calculation(self):
         self.assertEqual(self.bbox.as_corners().tolist(), [10, 20, 310, 420])
     
+    def test_top_left_bottom_right_calculation(self):
+        tl, br = self.bbox.as_tl_br()
+        
+        self.assertEqual(tl.tolist(), [10, 20])
+        self.assertEqual(br.tolist(), [310, 420])
+    
     def test_x_y_width_height_calculation(self):
         self.assertEqual(self.bbox.as_xywh().tolist(), [10, 20, 300, 400])
     

@@ -4,19 +4,17 @@ import dataclasses
 @dataclasses.dataclass(frozen=True)
 class TrackerConfig:
     # Training parameters.
-    n_epochs: int = 20
+    n_epochs: int = 50
     batch_size: int = 8
     
     # Optimizer parameters.
-    weight_decay: float = 5e-4
+    weight_decay: float = 5.e-4
     momentum: float = 0.9
-    # initial_lr: float = 1e-2
-    # ultimate_lr: float = 1e-5
-    initial_lr: float = 1.e-3
+    initial_lr: float = 1.e-2
     ultimate_lr: float = 1.e-5
     
     # Dataset parameters.
-    pairs_per_seq: int = 10
+    pairs_per_seq: int = 1000
     exemplar_size: int = 127
     instance_size: int = 255
     
@@ -43,4 +41,4 @@ class TrackerConfig:
     n_scales: int = 5
     scale_step: float = 1.025
     # Scale interpolation (for damping).
-    scale_damping: float = 0.35
+    scale_damping: float = 0.59
