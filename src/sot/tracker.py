@@ -145,6 +145,7 @@ class TrackerSiamFC:
         disp_in_image = disp_in_instance * self.curr_instance_side_size * \
                         (peak_scale / self.cfg.instance_size)
         disp_in_image = disp_in_image.round().astype(np.int)
+        # Change from [row, col] to [x, y] coordinates.
         self.target_bbox.shift(disp_in_image[::-1])
         
         # Update target scale.
