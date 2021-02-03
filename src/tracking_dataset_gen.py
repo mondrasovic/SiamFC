@@ -1,6 +1,7 @@
 import abc
 import click
 import numbers
+import pathlib
 
 import cv2 as cv
 import numpy as np
@@ -8,10 +9,11 @@ import numpy as np
 from sot.bbox import BBox
 
 
-IMG_WIDTH = 1024
-IMG_HEIGHT = 768
+IMG_WIDTH = 640
+IMG_HEIGHT = 480
 
-N_TRACKED_OBJECTS = 2
+N_TRACKED_OBJECTS = 1
+N_IMGS = 500
 
 
 def rand_between(a, b, *, size=None, as_int=False):
@@ -108,7 +110,7 @@ class Rectangle(TrackedObject):
 
 class TrackedObjectsManager:
     def __init__(
-            self, tracked_objs, coord_move_range=(-50, 50),
+            self, tracked_objs, coord_move_range=(-30, 30),
             side_scale_range=(0.95, 1.05)):
         self.tracked_objs = tracked_objs
         
@@ -138,8 +140,8 @@ class TrackedObjectGenerator:
     }
     
     def __init__(
-            self, img_size, width_range=(80, 100), height_range=(40, 60),
-            friction_range=(0.4, 0.8), center_attraction_range=(0.03, 0.07)):
+            self, img_size, width_range=(80, 120), height_range=(80, 120),
+            friction_range=(0.4, 0.8), center_attraction_range=(0.02, 0.06)):
         self.img_size = img_size
         
         self.width_range = width_range
@@ -189,17 +191,26 @@ def main(output_dir_path):
         for _ in range(N_TRACKED_OBJECTS)]
     tracked_objs_man = TrackedObjectsManager(tracked_objs)
     
-    for _ in range(500):
-        img = np.zeros((IMG_HEIGHT, IMG_WIDTH, 3), dtype=np.uint8)
-        
-        tracked_objs_man.move()
-        tracked_objs_man.rescale()
-        tracked_objs_man.render(img)
-        
-        cv.imshow('preview', img)
-        key = cv.waitKey(60) & 0xff
-        if key == ord('q'):
-            break
+    output_dir = pathlib.Path(output_dir_path) / 'simple_shape'
+    img_output_dir = output_dir / 'img'
+    img_output_dir.mkdir(parents=True, exist_ok=True)
+    
+    with open(str(output_dir / 'groundtruth_rect.txt'), 'wt') as bbox_file:
+        for i in range(1, N_IMGS + 1):
+            img = np.zeros((IMG_HEIGHT, IMG_WIDTH, 3), dtype=np.uint8)
+            
+            tracked_objs_man.move()
+            # tracked_objs_man.rescale()
+            tracked_objs_man.render(img)
+            
+            output_file_path = str(img_output_dir / f'{i:04d}.jpg')
+            cv.imwrite(output_file_path, img)
+            bbox = tracked_objs_man.tracked_objs[0].motion_model.bbox.as_xywh()
+            bbox_file.write(','.join(map(str, bbox)) + '\n')
+            # cv.imshow('preview', img)
+            # key = cv.waitKey(60) & 0xff
+            # if key == ord('q'):
+            #     break
     
     cv.destroyAllWindows()
     

@@ -93,6 +93,7 @@ class TrackerSiamFC:
         instances_imgs = [
             center_crop_and_resize(img, bbox, instance_size)
             for bbox in self.iter_target_centered_scaled_instance_bboxes()]
+        
         instances_imgs = np.stack(instances_imgs, axis=0)
         
         self.model.eval()
@@ -100,11 +101,22 @@ class TrackerSiamFC:
         instances_features = self.model.extract_visual_features(
             instances_imgs_tensor)
         
-        # TODO Maybe the exemplar lacks the dimension so it should be repeated.
         responses = self.model.calc_response_map(
             self.exemplar_emb, instances_features)
         # Remove the channel dimension, as it is just 1.
         responses = responses.squeeze(1).cpu().numpy()
+        
+        # import copy
+        # rr = copy.deepcopy(responses)
+        # for i, r in enumerate(rr):
+        #     r /= r.max()
+        #     r *= 255
+        #     r = r.round().astype(np.uint8)
+        #     r = cv.resize(r, (500, 500), interpolation=cv.INTER_CUBIC)
+        #     r = cv.applyColorMap(r, cv.COLORMAP_JET)
+        #     cv.imshow(f"{i:04d} preview (img. shape {img.shape})", r)
+        # cv.waitKey(0)
+        # cv.destroyAllWindows()
         
         response_size_upscaled = (
             self.response_size_upscaled, self.response_size_upscaled)
@@ -117,22 +129,23 @@ class TrackerSiamFC:
         
         response = responses[peak_scale_pos]
         response -= response.min()
-        response /= response.sum() + 1e-16
-        response = (1 - self.cfg.cosine_win_influence) * response + \
-                   self.cfg.cosine_win_influence * self.cosine_win
+        response /= response.sum() + 1.e-16
+        # response = (1 - self.cfg.cosine_win_influence) * response + \
+        #            self.cfg.cosine_win_influence * self.cosine_win
         
         # The assumption is that the peak response value is in the center of the
         # response map. Thus, we compute the change with respect to the center
         # and convert it back to the pixel coordinates in the image.
         peak_response_pos = np.asarray(
             np.unravel_index(response.argmax(), response.shape))
+        
         disp_in_response = peak_response_pos - self.response_size_upscaled // 2
         disp_in_instance = disp_in_response * \
                            (self.cfg.total_stride / self.cfg.response_upscale)
-        disp_in_image = disp_in_instance * self.target_bbox.center * \
+        disp_in_image = disp_in_instance * self.curr_instance_side_size * \
                         (peak_scale / self.cfg.instance_size)
         disp_in_image = disp_in_image.round().astype(np.int)
-        self.target_bbox.shift(disp_in_image)
+        self.target_bbox.shift(disp_in_image[::-1])
         
         # Update target scale.
         new_scale = (1 - self.cfg.scale_damping) * 1.0 + \

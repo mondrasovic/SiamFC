@@ -8,7 +8,7 @@ from PIL import Image
 from sot.bbox import BBox
 
 
-SizeT = Union[np.ndarray, Tuple[int, int]]
+Size = Union[np.ndarray, Tuple[int, int]]
 
 
 def calc_bbox_side_size_with_context(bbox: BBox) -> float:
@@ -18,7 +18,7 @@ def calc_bbox_side_size_with_context(bbox: BBox) -> float:
 
 
 def center_crop_and_resize(
-        img: np.ndarray, bbox: BBox, target_size: SizeT,
+        img: np.ndarray, bbox: BBox, target_size: Size,
         border: Optional[Union[int, Tuple[int, ...]]] = None,
         interpolation=cv.INTER_CUBIC) -> np.ndarray:
     assert img.ndim == 3, "expected three dimensional image"
@@ -46,7 +46,7 @@ def center_crop_and_resize(
 
 
 def create_ground_truth_mask_and_weight(
-        size: SizeT, radius: float, total_stride: int,
+        size: Size, radius: float, total_stride: int,
         batch_size: int) -> Tuple[np.ndarray, np.ndarray]:
     assert radius > 0, "radius must be positive"
     assert total_stride > 0, "total stride must be positive"

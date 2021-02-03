@@ -69,7 +69,7 @@ class BBox:
         assert min(width_scale, height_scale) >= 0, \
             "width and height scale factors must be non-negative"
         
-        new_size = self.size * np.array((width_scale, height_scale))
+        new_size = self.size * np.asarray((width_scale, height_scale))
         new_size = new_size.round().astype(np.int)
         
         if in_place:

@@ -30,7 +30,7 @@ def iter_dir_imgs(dir_path: str) -> Iterable[np.ndarray]:
 
 
 @click.command()
-@click.option('-i', '--imgs-dir-path', help="directory path with images")
+@click.option("-i", "--imgs-dir-path", help="directory path with images")
 def main(imgs_dir_path: Optional[str]) -> int:
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     cfg = TrackerConfig()
@@ -46,7 +46,7 @@ def main(imgs_dir_path: Optional[str]) -> int:
     for frame in imgs_iter:
         if is_first:
             # bbox = cv.selectROI("tracker initialization", frame)
-            bbox = (336, 165, 26, 61)
+            bbox = (306, 321, 119, 105)
             bbox = np.asarray(bbox)
             tracker.init(frame, bbox)
             is_first = False

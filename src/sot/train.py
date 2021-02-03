@@ -12,7 +12,7 @@ from torch.utils.data import DataLoader
 from sot.cfg import TrackerConfig
 from sot.dataset import (
     build_dataset_and_init, OTBDataset,
-    SiamesePairwiseDataset, ImageNetVideoDataset
+    SiamesePairwiseDataset
 )
 from sot.losses import WeightedBCELoss
 from sot.tracker import TrackerSiamFC
@@ -35,9 +35,11 @@ class SiamFCTrainer:
         self.mask_mat = torch.from_numpy(mask_mat).float().to(self.device)
         weight_mat = torch.from_numpy(weight_mat).float()
         
+        # self.optimizer = optim.SGD(
+        #     self.tracker.model.parameters(), lr=self.cfg.initial_lr,
+        #     weight_decay=self.cfg.weight_decay, momentum=self.cfg.momentum)
         self.optimizer = optim.SGD(
-            self.tracker.model.parameters(), lr=self.cfg.initial_lr,
-            weight_decay=self.cfg.weight_decay, momentum=self.cfg.momentum)
+            self.tracker.model.parameters(), lr=self.cfg.initial_lr)
         self.criterion = WeightedBCELoss(weight_mat).to(self.device)
         
         self.lr_scheduler = self.create_exponential_lr_scheduler(
@@ -46,7 +48,8 @@ class SiamFCTrainer:
     
     def run(self) -> None:
         pairwise_dataset = self.init_pairwise_dataset()
-        num_workers = max(1, multiprocessing.cpu_count() - 1)
+        # num_workers = max(1, multiprocessing.cpu_count() - 1)
+        num_workers = 4
         pin_memory = torch.cuda.is_available()
         
         train_loader = DataLoader(
@@ -71,7 +74,7 @@ class SiamFCTrainer:
                     pbar.set_description(f"loss: {loss.item():.6f}")
                     pbar.update()
             
-            self.lr_scheduler.step()
+            # self.lr_scheduler.step()
             
             torch.save(self.tracker.model.state_dict(), '../../model.pth')
     
@@ -84,7 +87,8 @@ class SiamFCTrainer:
             # dataset_path = '../../../../datasets/ILSVRC2015_VID'
             # data_seq = build_dataset_and_init(
             #     ImageNetVideoDataset, dataset_path, 'train')
-            dataset_path = '../../../../datasets/OTB_2013_small'
+            # dataset_path = '../../../../datasets/OTB_2013_small'
+            dataset_path = '../../../../datasets/simple_shape_dataset'
             data_seq = build_dataset_and_init(OTBDataset, dataset_path)
             with open(str(cache_file), 'wb') as out_file:
                 pickle.dump(data_seq, out_file,

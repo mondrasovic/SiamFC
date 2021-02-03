@@ -10,11 +10,11 @@ class TrackerConfig:
     # Optimizer parameters.
     weight_decay: float = 5.e-4
     momentum: float = 0.9
-    initial_lr: float = 1.e-2
+    initial_lr: float = 1.e-3
     ultimate_lr: float = 1.e-5
     
     # Dataset parameters.
-    pairs_per_seq: int = 1000
+    pairs_per_seq: int = 300
     exemplar_size: int = 127
     instance_size: int = 255
     
@@ -30,7 +30,7 @@ class TrackerConfig:
     
     total_stride = 8
     
-    positive_class_radius = 16
+    positive_class_radius = 20
     
     # Upscale coefficient for the response
     # map. Authors chose to upscale the
@@ -40,5 +40,5 @@ class TrackerConfig:
     # No. of different scales for object search.
     n_scales: int = 5
     scale_step: float = 1.025
-    # Scale interpolation (for damping).
+    # Scale linear interpolation (for smooth transition).
     scale_damping: float = 0.59
