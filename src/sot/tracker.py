@@ -74,6 +74,8 @@ class TrackerSiamFC:
             img, exemplar_bbox,
             (self.cfg.exemplar_size, self.cfg.exemplar_size))
         
+        cv.imshow("exemplar image", exemplar_img)
+        
         self.model.eval()
         exemplar_img_tensor = cv_img_to_tensor(exemplar_img, self.device)
         self.exemplar_emb = self.model.extract_visual_features(
@@ -108,13 +110,13 @@ class TrackerSiamFC:
         
         # import copy
         # rr = copy.deepcopy(responses)
-        # for i, r in enumerate(rr):
+        # for i, r in enumerate(rr, start=1):
         #     r /= r.max()
         #     r *= 255
         #     r = r.round().astype(np.uint8)
         #     r = cv.resize(r, (500, 500), interpolation=cv.INTER_CUBIC)
         #     r = cv.applyColorMap(r, cv.COLORMAP_JET)
-        #     cv.imshow(f"{i:04d} preview (img. shape {img.shape})", r)
+        #     cv.imshow(f"{i:04d} response map", r)
         # cv.waitKey(0)
         # cv.destroyAllWindows()
         
@@ -148,13 +150,14 @@ class TrackerSiamFC:
         disp_in_image = disp_in_instance * self.curr_instance_side_size * \
                         (peak_scale / self.cfg.instance_size)
         disp_in_image = disp_in_image.round().astype(np.int)
-        # Change from [row, col] to [x, y] coordinates.
-        self.target_bbox.shift(disp_in_image[::-1])
         
         # Update target scale.
         new_scale = (1 - self.cfg.scale_damping) * 1.0 + \
                     (self.cfg.scale_damping * peak_scale)
         self.curr_instance_side_size *= new_scale
+
+        # Change from [row, col] to [x, y] coordinates.
+        self.target_bbox.shift(disp_in_image[::-1])
         self.target_bbox.rescale(new_scale, new_scale)
         
         return self.target_bbox.as_xywh()

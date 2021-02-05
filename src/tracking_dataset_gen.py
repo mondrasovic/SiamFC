@@ -1,11 +1,13 @@
 import abc
 import copy
 import click
+import tqdm
 import numbers
 import pathlib
 
 import cv2 as cv
 import numpy as np
+from skimage.util import random_noise
 
 from sot.bbox import BBox
 
@@ -13,7 +15,7 @@ from sot.bbox import BBox
 IMG_WIDTH = 640
 IMG_HEIGHT = 480
 
-N_OBJECTS_ON_SCENE = 2
+N_OBJECTS_ON_SCENE = 4
 N_FRAMES = 500
 
 
@@ -47,16 +49,14 @@ class MotionModel:
         self.max_bbox_side = int(round(self.bbox.size.max() * 1.5))
         self.img_center = self.img_size / 2
     
-    def update(self, shift, repulsion_points=None):
+    def update(self, shift, apply_center_attraction):
         self.velocity = self.friction * self.velocity +\
                         (1 - self.friction) * shift
         
-        center_diff = (self.img_center - self.bbox.center)
-        self.velocity = (1 - self.center_attraction) * self.velocity +\
-                        self.center_attraction * center_diff
-        
-        if repulsion_points:
-            pass
+        if apply_center_attraction:
+            center_diff = (self.img_center - self.bbox.center)
+            self.velocity = (1 - self.center_attraction) * self.velocity +\
+                            self.center_attraction * center_diff
         
         center_shift = self.velocity.round().astype(np.int)
         bbox_shifted = self.bbox.shift(center_shift, in_place=False)
@@ -77,8 +77,8 @@ class TrackedObject(abc.ABC):
         self.motion_model = motion_model
         self.draw_kwargs = dict(color=color, thickness=-1, lineType=cv.LINE_AA)
     
-    def move(self, center_shift):
-        self.motion_model.update(center_shift)
+    def move(self, center_shift, apply_center_attraction):
+        self.motion_model.update(center_shift, apply_center_attraction)
     
     def rescale(self, width_scale, height_scale):
         self.motion_model.rescale(width_scale, height_scale)
@@ -115,8 +115,8 @@ class Rectangle(TrackedObject):
 
 class TrackedObjectsManager:
     def __init__(
-            self, tracked_objs, coord_move_range=(-30, 30),
-            side_scale_range=(0.95, 1.05)):
+            self, tracked_objs, coord_move_range=(-5, 5),
+            side_scale_range=(0.98, 1.02)):
         self.tracked_objs = tracked_objs
         
         self.coord_move_range = coord_move_range
@@ -125,7 +125,8 @@ class TrackedObjectsManager:
     def move(self):
         for tracked_obj in self.tracked_objs:
             center_shift = rand_between(*self.coord_move_range, size=2)
-            tracked_obj.move(center_shift)
+            apply_center_attraction = np.random.rand() < 0.1
+            tracked_obj.move(center_shift, apply_center_attraction)
     
     def rescale(self):
         for tracked_obj in self.tracked_objs:
@@ -145,8 +146,8 @@ class TrackedObjectGenerator:
     }
     
     def __init__(
-            self, img_size, width_range=(100, 140), height_range=(100, 140),
-            friction_range=(0.4, 0.8), center_attraction_range=(0.02, 0.06)):
+            self, img_size, width_range=(100, 150), height_range=(100, 150),
+            friction_range=(0.2, 0.9), center_attraction_range=(0.01, 0.06)):
         self.img_size = img_size
         
         self.width_range = width_range
@@ -196,6 +197,22 @@ class ImageGenerator:
         return img
 
 
+def apply_noise(img):
+    rnd_val = np.random.random()
+    
+    if rnd_val < 0.6:
+        return img
+    elif rnd_val < 0.8:
+        mode = np.random.choice(('s&p', 'salt', 'pepper'))
+        amount = rand_between(0.01, 0.2)
+        noisy_img = random_noise(img, mode=mode, amount=amount)
+    else:
+        mode = np.random.choice(('gaussian', 'speckle', 'poisson', 'localvar'))
+        noisy_img = random_noise(img, mode=mode)
+        
+    return (noisy_img * 255).round().astype(np.uint8)
+
+
 def generate_track(
         tracked_obj_names, obj_gen, img_gen, track_output_dir, *, show=False):
     tracked_objs = [
@@ -215,8 +232,10 @@ def generate_track(
             tracked_objs_man.move()
             tracked_objs_man.rescale()
             tracked_objs_man.render(img)
-        
-            output_file_path = str(img_output_dir / f"{i:04d}.jpg")
+            
+            img = apply_noise(img)
+            
+            output_file_path = str(img_output_dir / f"{i:04d}.png")
             cv.imwrite(output_file_path, img)
             
             bbox = tracked_objs_man.tracked_objs[-1].motion_model.bbox.as_xywh()
@@ -224,7 +243,7 @@ def generate_track(
             
             if show:
                 cv.imshow('preview', img)
-                key = cv.waitKey(60) & 0xff
+                key = cv.waitKey(40) & 0xff
                 if key == ord('q'):
                     break
     
@@ -244,7 +263,7 @@ def main(n_tracks, output_dir_path):
     tracked_obj_names = ('rectangle', 'ellipse')
     output_dir = pathlib.Path(output_dir_path)
     
-    for track_id in range(1, int(n_tracks) + 1):
+    for track_id in tqdm.tqdm(range(1, int(n_tracks) + 1)):
         track_output_dir = output_dir / f"track_{track_id:04d}"
         generate_track(
             tracked_obj_names, obj_gen, img_gen, track_output_dir)

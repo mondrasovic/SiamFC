@@ -26,12 +26,15 @@ from sot.utils import create_ground_truth_mask_and_weight
 
 LOG_DIR = "../../logs"
 MODEL_DIR = "../../model.pth"
+DATASET_DIR = "../../../../datasets/simple_shape_dataset"
+DATASET_CACHE_FILE = "../../dataset_train_dump.bin"
 
 
 def cv_show_tensor_as_img(img: torch.Tensor, win_name: str):
     img = img.cpu().detach().squeeze(0).numpy()
     img = np.transpose(img, axes=(1, 2, 0))
     cv.imshow(win_name, img)
+
 
 def cv_wait_key_and_destroy_all(delay: int = 0, quit_key: str = 'q') -> bool:
     key = cv.waitKey(delay) & 0xff
@@ -77,6 +80,8 @@ class SiamFCTrainer:
             pairwise_dataset, batch_size=self.cfg.batch_size, shuffle=True,
             num_workers=num_workers, pin_memory=pin_memory, drop_last=True)
         
+        self.tracker.model.train()
+        
         for epoch in range(1, self.cfg.n_epochs + 1):
             loss = self._run_epoch(epoch, train_loader)
             writer.add_scalar("Loss/train", loss, epoch)
@@ -85,11 +90,13 @@ class SiamFCTrainer:
         writer.close()
     
     def _run_epoch(self, epoch: int, train_loader: DataLoader) -> float:
-        batch_loss = 0.0
+        losses_sum = 0.0
         n_batches = len(train_loader)
         
+        epoch_descr = f"epoch: {epoch}/{self.cfg.n_epochs}"
+        
         with tqdm.tqdm(total=n_batches, file=sys.stdout) as pbar:
-            for exemplar, instance in train_loader:
+            for batch, (exemplar, instance) in enumerate(train_loader, start=1):
                 # cv_show_tensor_as_img(exemplar[0], "exemplar image")
                 # cv_show_tensor_as_img(instance[0], "instance image")
                 # if cv_wait_key_and_destroy_all():
@@ -108,21 +115,20 @@ class SiamFCTrainer:
                 self.optimizer.step()
                 
                 curr_loss = loss.item()
+                losses_sum += curr_loss
+                curr_batch_loss = losses_sum / batch
                 
-                batch_loss += curr_loss
-                pbar.set_description(
-                    f"epoch: {epoch}/{self.cfg.n_epochs} | "
-                    f"loss: {curr_loss:.6f}")
+                loss_descr = f"loss: {curr_loss:.5f} [{curr_batch_loss:.4f}]"
+                pbar.set_description(f"{epoch_descr} | {loss_descr}")
                 pbar.update()
         
-        batch_loss /= n_batches
-        
         self.lr_scheduler.step()
+        batch_loss = losses_sum / n_batches
         
         return batch_loss
     
     def init_pairwise_dataset(self) -> SiamesePairwiseDataset:
-        cache_file = pathlib.Path("../../dataset_train_dump.bin")
+        cache_file = pathlib.Path(DATASET_CACHE_FILE)
         if cache_file.exists():
             with open(str(cache_file), 'rb') as in_file:
                 data_seq = pickle.load(in_file)
@@ -131,7 +137,7 @@ class SiamFCTrainer:
             # data_seq = build_dataset_and_init(
             #     ImageNetVideoDataset, dataset_path, 'train')
             # dataset_path = '../../../../datasets/OTB_2013_small'
-            dataset_path = "../../../../datasets/simple_shape_dataset"
+            dataset_path = DATASET_DIR
             data_seq = build_dataset_and_init(OTBDataset, dataset_path)
             with open(str(cache_file), 'wb') as out_file:
                 pickle.dump(data_seq, out_file,

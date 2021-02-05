@@ -10,6 +10,10 @@ from sot.cfg import TrackerConfig
 from sot.tracker import TrackerSiamFC
 
 
+MODEL_DIR = "../../model.pth"
+DATASET_DIR = "../../../../datasets/simple_shape_dataset"
+
+
 def iter_video_capture() -> Iterable[np.ndarray]:
     cap = cv.VideoCapture(0)
     
@@ -34,7 +38,7 @@ def iter_dir_imgs(dir_path: str) -> Iterable[np.ndarray]:
 def main(imgs_dir_path: Optional[str]) -> int:
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     cfg = TrackerConfig()
-    tracker = TrackerSiamFC(cfg, device, "../../model.pth")
+    tracker = TrackerSiamFC(cfg, device, MODEL_DIR)
     
     is_first = True
     
@@ -46,7 +50,7 @@ def main(imgs_dir_path: Optional[str]) -> int:
     for frame in imgs_iter:
         if is_first:
             # bbox = cv.selectROI("tracker initialization", frame)
-            bbox = (306, 321, 119, 105)
+            bbox = (264,64,120,125)
             bbox = np.asarray(bbox)
             tracker.init(frame, bbox)
             is_first = False
@@ -57,7 +61,7 @@ def main(imgs_dir_path: Optional[str]) -> int:
             cv.rectangle(frame, pt1, pt2, (0, 255, 0), 3, cv.LINE_AA)
         
         cv.imshow("tracking preview", frame)
-        key = cv.waitKey(60) & 0xff
+        key = cv.waitKey(0) & 0xff
         if key == ord('q'):
             break
     
