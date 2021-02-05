@@ -1,3 +1,4 @@
+import sys
 import multiprocessing
 import pathlib
 import pickle
@@ -7,8 +8,11 @@ import numpy as np
 import cv2 as cv
 import torch
 import tqdm
+
 from torch import optim
 from torch.utils.data import DataLoader
+
+from torch.utils.tensorboard import SummaryWriter
 
 from sot.cfg import TrackerConfig
 from sot.dataset import (
@@ -18,6 +22,10 @@ from sot.dataset import (
 from sot.losses import WeightedBCELoss
 from sot.tracker import TrackerSiamFC
 from sot.utils import create_ground_truth_mask_and_weight
+
+
+LOG_DIR = "../../logs"
+MODEL_DIR = "../../model.pth"
 
 
 def cv_show_tensor_as_img(img: torch.Tensor, win_name: str):
@@ -59,6 +67,8 @@ class SiamFCTrainer:
             self.cfg.n_epochs)
     
     def run(self) -> None:
+        writer = SummaryWriter(LOG_DIR)
+        
         pairwise_dataset = self.init_pairwise_dataset()
         num_workers = max(1, min(3, multiprocessing.cpu_count() - 1))
         pin_memory = torch.cuda.is_available()
@@ -68,31 +78,48 @@ class SiamFCTrainer:
             num_workers=num_workers, pin_memory=pin_memory, drop_last=True)
         
         for epoch in range(1, self.cfg.n_epochs + 1):
-            print(f"\nepoch: {epoch}/{self.cfg.n_epochs}")
+            loss = self._run_epoch(epoch, train_loader)
+            writer.add_scalar("Loss/train", loss, epoch)
+            torch.save(self.tracker.model.state_dict(), MODEL_DIR)
+        
+        writer.close()
+    
+    def _run_epoch(self, epoch: int, train_loader: DataLoader) -> float:
+        batch_loss = 0.0
+        n_batches = len(train_loader)
+        
+        with tqdm.tqdm(total=n_batches, file=sys.stdout) as pbar:
+            for exemplar, instance in train_loader:
+                # cv_show_tensor_as_img(exemplar[0], "exemplar image")
+                # cv_show_tensor_as_img(instance[0], "instance image")
+                # if cv_wait_key_and_destroy_all():
+                #     return  # =====>
             
-            with tqdm.tqdm(total=len(train_loader)) as pbar:
-                for exemplar, instance in tqdm.tqdm(train_loader):
-                    # cv_show_tensor_as_img(exemplar[0], "exemplar image")
-                    # cv_show_tensor_as_img(instance[0], "instance image")
-                    # if cv_wait_key_and_destroy_all():
-                    #     return  # =====>
-                    
-                    exemplar = exemplar.to(self.device)
-                    instance = instance.to(self.device)
-                    
-                    self.optimizer.zero_grad()
-                    pred_response_maps = self.tracker.model(exemplar, instance)
-                    
-                    loss = self.criterion(pred_response_maps, self.mask_mat)
-                    loss.backward()
-                    self.optimizer.step()
-                    
-                    pbar.set_description(f"loss: {loss.item():.6f}")
-                    pbar.update()
+                exemplar = exemplar.to(self.device)
+                instance = instance.to(self.device)
             
-            # self.lr_scheduler.step()
+                self.optimizer.zero_grad()
+                pred_response_maps = self.tracker.model(exemplar, instance)
             
-            torch.save(self.tracker.model.state_dict(), "../../model.pth")
+                loss = self.criterion(pred_response_maps, self.mask_mat)
+                loss.backward()
+                # for param in self.tracker.model.parameters():
+                #     print("param", np.linalg.norm(param.grad.cpu().detach().numpy()))
+                self.optimizer.step()
+                
+                curr_loss = loss.item()
+                
+                batch_loss += curr_loss
+                pbar.set_description(
+                    f"epoch: {epoch}/{self.cfg.n_epochs} | "
+                    f"loss: {curr_loss:.6f}")
+                pbar.update()
+        
+        batch_loss /= n_batches
+        
+        self.lr_scheduler.step()
+        
+        return batch_loss
     
     def init_pairwise_dataset(self) -> SiamesePairwiseDataset:
         cache_file = pathlib.Path("../../dataset_train_dump.bin")
@@ -142,7 +169,4 @@ def main() -> int:
 
 
 if __name__ == '__main__':
-    import sys
-    
-    
     sys.exit(main())

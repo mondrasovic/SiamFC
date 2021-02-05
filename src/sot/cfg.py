@@ -4,17 +4,17 @@ import dataclasses
 @dataclasses.dataclass(frozen=True)
 class TrackerConfig:
     # Training parameters.
-    n_epochs: int = 30
+    n_epochs: int = 5
     batch_size: int = 8
     
     # Optimizer parameters.
     weight_decay: float = 5.e-4
     momentum: float = 0.9
-    initial_lr: float = 1.e-1
+    initial_lr: float = 1.e-3
     ultimate_lr: float = 1.e-5
     
     # Dataset parameters.
-    pairs_per_seq: int = 200
+    pairs_per_seq: int = 100
     exemplar_size: int = 127
     instance_size: int = 255
     
@@ -32,7 +32,7 @@ class TrackerConfig:
     # map position to the image position.
     total_stride = 8
     
-    positive_class_radius = 20
+    positive_class_radius = 16
     
     # Upscale coefficient for the response
     # map. Authors chose to upscale the

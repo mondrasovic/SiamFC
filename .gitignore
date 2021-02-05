@@ -1,5 +1,6 @@
 .idea
 images
 cache
+logs
 *.bin
 *.pth
