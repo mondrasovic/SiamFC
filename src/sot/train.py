@@ -26,7 +26,8 @@ from sot.utils import create_ground_truth_mask_and_weight
 
 LOG_DIR = "../../logs"
 MODEL_DIR = "../../model.pth"
-DATASET_DIR = "../../../../datasets/simple_shape_dataset"
+# DATASET_DIR = "../../../../datasets/simple_shape_dataset"
+DATASET_DIR = "../../../../datasets/OTB_2013"
 DATASET_CACHE_FILE = "../../dataset_train_dump.bin"
 
 
@@ -58,11 +59,11 @@ class SiamFCTrainer:
         self.mask_mat = torch.from_numpy(mask_mat).float().to(self.device)
         weight_mat = torch.from_numpy(weight_mat).float()
         
-        # self.optimizer = optim.SGD(
-        #     self.tracker.model.parameters(), lr=self.cfg.initial_lr,
-        #     weight_decay=self.cfg.weight_decay, momentum=self.cfg.momentum)
         self.optimizer = optim.SGD(
-            self.tracker.model.parameters(), lr=self.cfg.initial_lr)
+            self.tracker.model.parameters(), lr=self.cfg.initial_lr,
+            weight_decay=self.cfg.weight_decay, momentum=self.cfg.momentum)
+        # self.optimizer = optim.SGD(
+        #     self.tracker.model.parameters(), lr=self.cfg.initial_lr)
         self.criterion = WeightedBCELoss(weight_mat).to(self.device)
         
         self.lr_scheduler = self.create_exponential_lr_scheduler(

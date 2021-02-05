@@ -50,7 +50,7 @@ def main(imgs_dir_path: Optional[str]) -> int:
     for frame in imgs_iter:
         if is_first:
             # bbox = cv.selectROI("tracker initialization", frame)
-            bbox = (264,64,120,125)
+            bbox = (463,288,131,101)
             bbox = np.asarray(bbox)
             tracker.init(frame, bbox)
             is_first = False

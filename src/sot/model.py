@@ -34,25 +34,25 @@ class SiamFCModel(nn.Module):
         
         self.response_map_scale: float = response_map_scale
         
-        # self.conv1 = _ConvBlock(
-        #     in_channels=3, out_channels=96, kernel_size=11, stride=2,
-        #     max_pool=True)
-        # self.conv2 = _ConvBlock(
-        #     in_channels=96, out_channels=256, kernel_size=5, groups=2,
-        #     max_pool=True)
-        # self.conv3 = _ConvBlock(in_channels=256, out_channels=384)
-        # self.conv4 = _ConvBlock(in_channels=384, out_channels=384)
-        # self.conv5 = _ConvBlock(in_channels=384, out_channels=256, groups=2)
-
         self.conv1 = _ConvBlock(
-            in_channels=3, out_channels=8, kernel_size=11, stride=2,
+            in_channels=3, out_channels=96, kernel_size=11, stride=2,
             max_pool=True)
         self.conv2 = _ConvBlock(
-            in_channels=8, out_channels=16, kernel_size=5, groups=2,
+            in_channels=96, out_channels=256, kernel_size=5, groups=2,
             max_pool=True)
-        self.conv3 = _ConvBlock(in_channels=16, out_channels=16)
-        self.conv4 = _ConvBlock(in_channels=16, out_channels=16)
-        self.conv5 = _ConvBlock(in_channels=16, out_channels=8, groups=2)
+        self.conv3 = _ConvBlock(in_channels=256, out_channels=384)
+        self.conv4 = _ConvBlock(in_channels=384, out_channels=384)
+        self.conv5 = _ConvBlock(in_channels=384, out_channels=256, groups=2)
+
+        # self.conv1 = _ConvBlock(
+        #     in_channels=3, out_channels=8, kernel_size=11, stride=2,
+        #     max_pool=True)
+        # self.conv2 = _ConvBlock(
+        #     in_channels=8, out_channels=16, kernel_size=5, groups=2,
+        #     max_pool=True)
+        # self.conv3 = _ConvBlock(in_channels=16, out_channels=16)
+        # self.conv4 = _ConvBlock(in_channels=16, out_channels=16)
+        # self.conv5 = _ConvBlock(in_channels=16, out_channels=8, groups=2)
     
     def forward(
             self, exemplar: torch.Tensor,

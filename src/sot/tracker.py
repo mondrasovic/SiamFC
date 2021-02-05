@@ -74,7 +74,7 @@ class TrackerSiamFC:
             img, exemplar_bbox,
             (self.cfg.exemplar_size, self.cfg.exemplar_size))
         
-        cv.imshow("exemplar image", exemplar_img)
+        # cv.imshow("exemplar image", exemplar_img)
         
         self.model.eval()
         exemplar_img_tensor = cv_img_to_tensor(exemplar_img, self.device)
