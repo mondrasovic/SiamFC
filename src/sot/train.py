@@ -4,6 +4,7 @@ import pickle
 
 import click
 import numpy as np
+import cv2 as cv
 import torch
 import tqdm
 from torch import optim
@@ -17,6 +18,17 @@ from sot.dataset import (
 from sot.losses import WeightedBCELoss
 from sot.tracker import TrackerSiamFC
 from sot.utils import create_ground_truth_mask_and_weight
+
+
+def cv_show_tensor_as_img(img: torch.Tensor, win_name: str):
+    img = img.cpu().detach().squeeze(0).numpy()
+    img = np.transpose(img, axes=(1, 2, 0))
+    cv.imshow(win_name, img)
+
+def cv_wait_key_and_destroy_all(delay: int = 0, quit_key: str = 'q') -> bool:
+    key = cv.waitKey(delay) & 0xff
+    cv.destroyAllWindows()
+    return key == ord(quit_key)
 
 
 class SiamFCTrainer:
@@ -60,6 +72,11 @@ class SiamFCTrainer:
             
             with tqdm.tqdm(total=len(train_loader)) as pbar:
                 for exemplar, instance in tqdm.tqdm(train_loader):
+                    # cv_show_tensor_as_img(exemplar[0], "exemplar image")
+                    # cv_show_tensor_as_img(instance[0], "instance image")
+                    # if cv_wait_key_and_destroy_all():
+                    #     return  # =====>
+                    
                     exemplar = exemplar.to(self.device)
                     instance = instance.to(self.device)
                     

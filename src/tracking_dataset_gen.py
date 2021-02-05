@@ -206,7 +206,7 @@ def generate_track(
     img_output_dir = track_output_dir / "img"
     gt_bboxes_file_path = str(track_output_dir / "groundtruth_rect.txt")
     img_output_dir.mkdir(parents=True, exist_ok=True)
-    img_orig = img = img_gen.generate()
+    img_orig = img_gen.generate()
     
     with open(gt_bboxes_file_path, 'wt') as bbox_file:
         for i in range(1, N_FRAMES + 1):
@@ -219,7 +219,7 @@ def generate_track(
             output_file_path = str(img_output_dir / f"{i:04d}.jpg")
             cv.imwrite(output_file_path, img)
             
-            bbox = tracked_objs_man.tracked_objs[0].motion_model.bbox.as_xywh()
+            bbox = tracked_objs_man.tracked_objs[-1].motion_model.bbox.as_xywh()
             bbox_file.write(",".join(map(str, bbox)) + "\n")
             
             if show:

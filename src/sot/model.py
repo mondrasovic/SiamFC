@@ -14,7 +14,7 @@ class _ConvBlock(nn.Module):
                 in_channels=in_channels, out_channels=out_channels,
                 kernel_size=kernel_size, stride=stride, groups=groups,
                 bias=True),
-            # nn.BatchNorm2d(num_features=out_channels),
+            # nn.BatchNorm2d(num_features=out_channels),  # TODO Add BN layer.
             nn.ReLU(inplace=True)]
         
         if max_pool:
