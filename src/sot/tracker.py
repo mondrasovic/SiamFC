@@ -123,6 +123,8 @@ class TrackerSiamFC:
         responses = np.stack(
             [cv.resize(r, response_size_upscaled, interpolation=cv.INTER_CUBIC)
              for r in responses])
+        responses[:self.cfg.n_scales // 2] *= self.cfg.scale_penalty
+        responses[self.cfg.n_scales // 2 + 1:] *= self.cfg.scale_penalty
         
         peak_scale_pos = np.argmax(np.amax(responses, axis=(1, 2)))
         peak_scale = self.search_scales[peak_scale_pos]
@@ -130,8 +132,9 @@ class TrackerSiamFC:
         response = responses[peak_scale_pos]
         response -= response.min()
         response /= response.sum() + 1.e-16
-        # response = (1 - self.cfg.cosine_win_influence) * response + \
-        #            self.cfg.cosine_win_influence * self.cosine_win
+        
+        response = (1 - self.cfg.cosine_win_influence) * response + \
+                   self.cfg.cosine_win_influence * self.cosine_win
         
         # The assumption is that the peak response value is in the center of the
         # response map. Thus, we compute the change with respect to the center

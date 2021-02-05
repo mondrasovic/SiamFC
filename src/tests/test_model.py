@@ -17,10 +17,10 @@ class TestSiamFCModel(unittest.TestCase):
         self.assertEqual(list(exemplar_emb.shape), [1, 256, 6, 6])
     
     def test_feature_extraction_instance_shape(self):
-        exemplar_img = torch.ones((1, 3, 255, 255))
-        exemplar_emb = self.model.extract_visual_features(exemplar_img)
+        instance_img = torch.ones((1, 3, 255, 255))
+        instance_emb = self.model.extract_visual_features(instance_img)
         
-        self.assertEqual(list(exemplar_emb.shape), [1, 256, 22, 22])
+        self.assertEqual(list(instance_emb.shape), [1, 256, 22, 22])
     
     def test_forward_output_shape(self):
         exemplar_img = torch.ones((1, 3, 127, 127))

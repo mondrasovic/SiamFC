@@ -74,8 +74,7 @@ class SiamFCModel(nn.Module):
             self, exemplar_emb: torch.Tensor,
             instance_emb: torch.Tensor) -> torch.Tensor:
         response_map = self.cross_corr(exemplar_emb, instance_emb)
-        return response_map
-        # return response_map * self.response_map_scale
+        return response_map * self.response_map_scale
     
     @staticmethod
     def cross_corr(

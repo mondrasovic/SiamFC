@@ -28,6 +28,8 @@ class TrackerConfig:
     # Influence of cosine (Hanning) window on the response map.
     cosine_win_influence = 0.176
     
+    # Total stride of the network. It is used when mapping from the response
+    # map position to the image position.
     total_stride = 8
     
     positive_class_radius = 20
@@ -42,3 +44,4 @@ class TrackerConfig:
     scale_step: float = 1.025
     # Scale linear interpolation (for smooth transition).
     scale_damping: float = 0.59
+    scale_penalty: float = 0.9745
