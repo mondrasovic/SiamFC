@@ -34,7 +34,7 @@ def iter_dir_imgs(dir_path: str) -> Iterable[np.ndarray]:
 def main(imgs_dir_path: Optional[str]) -> int:
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     cfg = TrackerConfig()
-    tracker = TrackerSiamFC(cfg, device, '../../model.pth')
+    tracker = TrackerSiamFC(cfg, device, "../../model.pth")
     
     is_first = True
     

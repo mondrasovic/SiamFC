@@ -48,8 +48,7 @@ class SiamFCTrainer:
     
     def run(self) -> None:
         pairwise_dataset = self.init_pairwise_dataset()
-        # num_workers = max(1, multiprocessing.cpu_count() - 1)
-        num_workers = 4
+        num_workers = max(1, min(3, multiprocessing.cpu_count() - 1))
         pin_memory = torch.cuda.is_available()
         
         train_loader = DataLoader(
@@ -76,10 +75,10 @@ class SiamFCTrainer:
             
             # self.lr_scheduler.step()
             
-            torch.save(self.tracker.model.state_dict(), '../../model.pth')
+            torch.save(self.tracker.model.state_dict(), "../../model.pth")
     
     def init_pairwise_dataset(self) -> SiamesePairwiseDataset:
-        cache_file = pathlib.Path('../../dataset_train_dump.bin')
+        cache_file = pathlib.Path("../../dataset_train_dump.bin")
         if cache_file.exists():
             with open(str(cache_file), 'rb') as in_file:
                 data_seq = pickle.load(in_file)
@@ -88,7 +87,7 @@ class SiamFCTrainer:
             # data_seq = build_dataset_and_init(
             #     ImageNetVideoDataset, dataset_path, 'train')
             # dataset_path = '../../../../datasets/OTB_2013_small'
-            dataset_path = '../../../../datasets/simple_shape_dataset'
+            dataset_path = "../../../../datasets/simple_shape_dataset"
             data_seq = build_dataset_and_init(OTBDataset, dataset_path)
             with open(str(cache_file), 'wb') as out_file:
                 pickle.dump(data_seq, out_file,

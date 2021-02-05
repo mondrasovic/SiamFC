@@ -1,4 +1,5 @@
 import abc
+import copy
 import click
 import numbers
 import pathlib
@@ -12,8 +13,8 @@ from sot.bbox import BBox
 IMG_WIDTH = 640
 IMG_HEIGHT = 480
 
-N_TRACKED_OBJECTS = 1
-N_IMGS = 500
+N_OBJECTS_ON_SCENE = 2
+N_FRAMES = 500
 
 
 def rand_between(a, b, *, size=None, as_int=False):
@@ -27,6 +28,10 @@ def rand_between(a, b, *, size=None, as_int=False):
         vals = np.random.rand(*size) * diff + a
     
     return np.round(vals).astype(np.int) if as_int else vals
+
+
+def generate_color():
+    return tuple(map(int, rand_between(0, 255, size=3, as_int=True)))
 
 
 class MotionModel:
@@ -92,7 +97,7 @@ class Ellipse(TrackedObject):
         half_size = tuple(self.motion_model.bbox.size // 2)
         
         cv.ellipse(
-            img, center, half_size, startAngle=0, endAngle=0,
+            img, center, half_size, angle=0, startAngle=0, endAngle=360,
             **self.draw_kwargs)
 
 
@@ -140,7 +145,7 @@ class TrackedObjectGenerator:
     }
     
     def __init__(
-            self, img_size, width_range=(80, 120), height_range=(80, 120),
+            self, img_size, width_range=(100, 140), height_range=(100, 140),
             friction_range=(0.4, 0.8), center_attraction_range=(0.02, 0.06)):
         self.img_size = img_size
         
@@ -153,7 +158,7 @@ class TrackedObjectGenerator:
     def generate_tracked_object(self, obj_name):
         obj_cls = self.SUPPORTED_OBJECTS[obj_name]
         motion_model = self.generate_motion_model()
-        color = tuple(map(int, rand_between(0, 255, size=3, as_int=True)))
+        color = generate_color()
         
         return obj_cls(motion_model, color)
     
@@ -179,40 +184,70 @@ class TrackedObjectGenerator:
         return BBox(x, y, width, height)
 
 
+class ImageGenerator:
+    def __init__(self, img_size):
+        self.img_size = img_size
+    
+    def generate(self):
+        color = np.asarray(generate_color(), dtype=np.uint8)
+        img = np.ones((self.img_size[1], self.img_size[0], 3), dtype=np.uint8)
+        img = img * color
+        
+        return img
+
+
+def generate_track(
+        tracked_obj_names, obj_gen, img_gen, track_output_dir, *, show=False):
+    tracked_objs = [
+        obj_gen.generate_tracked_object(np.random.choice(tracked_obj_names))
+        for _ in range(N_OBJECTS_ON_SCENE)]
+    tracked_objs_man = TrackedObjectsManager(tracked_objs)
+    
+    img_output_dir = track_output_dir / "img"
+    gt_bboxes_file_path = str(track_output_dir / "groundtruth_rect.txt")
+    img_output_dir.mkdir(parents=True, exist_ok=True)
+    img_orig = img = img_gen.generate()
+    
+    with open(gt_bboxes_file_path, 'wt') as bbox_file:
+        for i in range(1, N_FRAMES + 1):
+            img = copy.deepcopy(img_orig)
+            
+            tracked_objs_man.move()
+            tracked_objs_man.rescale()
+            tracked_objs_man.render(img)
+        
+            output_file_path = str(img_output_dir / f"{i:04d}.jpg")
+            cv.imwrite(output_file_path, img)
+            
+            bbox = tracked_objs_man.tracked_objs[0].motion_model.bbox.as_xywh()
+            bbox_file.write(",".join(map(str, bbox)) + "\n")
+            
+            if show:
+                cv.imshow('preview', img)
+                key = cv.waitKey(60) & 0xff
+                if key == ord('q'):
+                    break
+    
+    if show:
+        cv.destroyAllWindows()
+
+
 @click.command()
+@click.argument('n_tracks')
 @click.argument('output_dir_path')
-def main(output_dir_path):
+def main(n_tracks, output_dir_path):
     np.random.seed(731995)
     
     img_size = np.asarray((IMG_WIDTH, IMG_HEIGHT))
     obj_gen = TrackedObjectGenerator(img_size)
-    tracked_objs = [
-        obj_gen.generate_tracked_object('rectangle')
-        for _ in range(N_TRACKED_OBJECTS)]
-    tracked_objs_man = TrackedObjectsManager(tracked_objs)
+    img_gen = ImageGenerator(img_size)
+    tracked_obj_names = ('rectangle', 'ellipse')
+    output_dir = pathlib.Path(output_dir_path)
     
-    output_dir = pathlib.Path(output_dir_path) / 'simple_shape'
-    img_output_dir = output_dir / 'img'
-    img_output_dir.mkdir(parents=True, exist_ok=True)
-    
-    with open(str(output_dir / 'groundtruth_rect.txt'), 'wt') as bbox_file:
-        for i in range(1, N_IMGS + 1):
-            img = np.zeros((IMG_HEIGHT, IMG_WIDTH, 3), dtype=np.uint8)
-            
-            tracked_objs_man.move()
-            # tracked_objs_man.rescale()
-            tracked_objs_man.render(img)
-            
-            output_file_path = str(img_output_dir / f'{i:04d}.jpg')
-            cv.imwrite(output_file_path, img)
-            bbox = tracked_objs_man.tracked_objs[0].motion_model.bbox.as_xywh()
-            bbox_file.write(','.join(map(str, bbox)) + '\n')
-            # cv.imshow('preview', img)
-            # key = cv.waitKey(60) & 0xff
-            # if key == ord('q'):
-            #     break
-    
-    cv.destroyAllWindows()
+    for track_id in range(1, int(n_tracks) + 1):
+        track_output_dir = output_dir / f"track_{track_id:04d}"
+        generate_track(
+            tracked_obj_names, obj_gen, img_gen, track_output_dir)
     
     return 0
 
