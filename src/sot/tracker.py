@@ -4,6 +4,8 @@ import cv2 as cv
 import numpy as np
 import torch
 
+from got10k.trackers import Tracker
+
 from bbox import BBox
 from model import SiamFCModel
 from sot.cfg import TrackerConfig
@@ -12,10 +14,10 @@ from utils import (
 )
 
 
-class TrackerSiamFC:
-    def __init__(
-            self, cfg: TrackerConfig, device: Union[torch.device, str],
-            model_path: Optional[str] = None) -> None:
+class TrackerSiamFC(Tracker):
+    def __init__(self, cfg: TrackerConfig, device: Union[torch.device, str],
+                 model_path: Optional[str] = None) -> None:
+        super().__init__(name='SiamFC')
         self.cfg: TrackerConfig = cfg
         
         if isinstance(device, torch.device):

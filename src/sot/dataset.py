@@ -211,6 +211,7 @@ class SiamesePairwiseDataset(Dataset):
         
         index = self.indices[index % len(self.data_seq)]
         img_files, annos = self.data_seq[index]
+        annos = annos.astype(np.int)
         
         valid_indices = annos[:, 2:].prod(axis=1) >= self.cfg.min_bbox_area
         valid_img_files = np.asarray(img_files)[valid_indices]
@@ -279,20 +280,23 @@ def build_dataset_and_init(cls, *args, **kwargs):
 
 
 if __name__ == '__main__':
-    cache_file = pathlib.Path('../../dataset_train_dump.bin')
-    if cache_file.exists():
-        with open(str(cache_file), 'rb') as in_file:
-            data_seq = pickle.load(in_file)
-    else:
-        # dataset_path = '../../../../datasets/ILSVRC2015_VID_small'
-        # data_seq = build_dataset_and_init(
-        #     OTBDataset, dataset_path, 'train')
-        dataset_path = '../../../../datasets/OTB_2013'
-        data_seq = build_dataset_and_init(OTBDataset, dataset_path)
-        with open(str(cache_file), 'wb') as out_file:
-            pickle.dump(data_seq, out_file, protocol=pickle.HIGHEST_PROTOCOL)
+    from typing import cast, Sequence
+    from got10k.datasets import GOT10k
     
-    pairwise_dataset = SiamesePairwiseDataset(data_seq, TrackerConfig())
+    # cache_file = pathlib.Path("../../dataset_train_dump.bin")
+    # if cache_file.exists():
+    #     with open(str(cache_file), 'rb') as in_file:
+    #         data_seq = pickle.load(in_file)
+    # else:
+    #     dataset_path = "../../../../datasets/OTB_2013"
+    #     data_seq = build_dataset_and_init(OTBDataset, dataset_path)
+    #     with open(str(cache_file), 'wb') as out_file:
+    #         pickle.dump(data_seq, out_file, protocol=pickle.HIGHEST_PROTOCOL)
+
+    dataset = GOT10k(root_dir="../../../../datasets/GOT10k", subset='val')
+    print(dataset)
+    pairwise_dataset = SiamesePairwiseDataset(
+        cast(Sequence, dataset), TrackerConfig())
     count = 10
     
     for i in range(count):
@@ -304,8 +308,41 @@ if __name__ == '__main__':
         instance_img = (instance_img.numpy() * 255).astype(np.uint8)
         instance_img = np.transpose(instance_img, axes=(1, 2, 0))
         
-        cv.imshow('exemplar', exemplar_img)
-        cv.imshow('instance', instance_img)
+        cv.imshow("exemplar", exemplar_img)
+        cv.imshow("instance", instance_img)
         cv.waitKey(0)
     
     cv.destroyAllWindows()
+
+#
+# if __name__ == '__main__':
+#     cache_file = pathlib.Path('../../dataset_train_dump.bin')
+#     if cache_file.exists():
+#         with open(str(cache_file), 'rb') as in_file:
+#             data_seq = pickle.load(in_file)
+#     else:
+#         # dataset_path = '../../../../datasets/ILSVRC2015_VID_small'
+#         # data_seq = build_dataset_and_init(
+#         #     OTBDataset, dataset_path, 'train')
+#         dataset_path = '../../../../datasets/OTB_2013'
+#         data_seq = build_dataset_and_init(OTBDataset, dataset_path)
+#         with open(str(cache_file), 'wb') as out_file:
+#             pickle.dump(data_seq, out_file, protocol=pickle.HIGHEST_PROTOCOL)
+#
+#     pairwise_dataset = SiamesePairwiseDataset(data_seq, TrackerConfig())
+#     count = 10
+#
+#     for i in range(count):
+#         exemplar_img, instance_img = pairwise_dataset[i]
+#
+#         exemplar_img = (exemplar_img.numpy() * 255).astype(np.uint8)
+#         exemplar_img = np.transpose(exemplar_img, axes=(1, 2, 0))
+#
+#         instance_img = (instance_img.numpy() * 255).astype(np.uint8)
+#         instance_img = np.transpose(instance_img, axes=(1, 2, 0))
+#
+#         cv.imshow('exemplar', exemplar_img)
+#         cv.imshow('instance', instance_img)
+#         cv.waitKey(0)
+#
+#     cv.destroyAllWindows()

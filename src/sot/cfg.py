@@ -4,7 +4,7 @@ import dataclasses
 @dataclasses.dataclass(frozen=True)
 class TrackerConfig:
     # Training parameters.
-    n_epochs: int = 20
+    n_epochs: int = 50
     batch_size: int = 8
     
     # Optimizer parameters.
@@ -14,12 +14,12 @@ class TrackerConfig:
     ultimate_lr: float = 1.e-5
     
     # Dataset parameters.
-    pairs_per_seq: int = 100
+    pairs_per_seq: int = 20
     exemplar_size: int = 127
     instance_size: int = 255
     
     # No. of frames between exemplar and instance.
-    max_pair_dist: int = 100
+    max_pair_dist: int = 20
     min_bbox_area: int = 10
     
     # Inference parameters.

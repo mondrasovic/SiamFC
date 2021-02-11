@@ -3,12 +3,15 @@ import multiprocessing
 import pathlib
 import pickle
 
+from typing import Sequence, cast
+
 import click
 import numpy as np
 import cv2 as cv
 import torch
 import tqdm
 
+from got10k.datasets import GOT10k
 from torch import optim
 from torch.utils.data import DataLoader
 
@@ -74,7 +77,7 @@ class SiamFCTrainer:
         writer = SummaryWriter(LOG_DIR)
         
         pairwise_dataset = self.init_pairwise_dataset()
-        num_workers = max(1, min(3, multiprocessing.cpu_count() - 1))
+        num_workers = max(1, min(6, multiprocessing.cpu_count() - 1))
         pin_memory = torch.cuda.is_available()
         
         train_loader = DataLoader(
@@ -129,22 +132,24 @@ class SiamFCTrainer:
         return batch_loss
     
     def init_pairwise_dataset(self) -> SiamesePairwiseDataset:
-        cache_file = pathlib.Path(DATASET_CACHE_FILE)
-        if cache_file.exists():
-            with open(str(cache_file), 'rb') as in_file:
-                data_seq = pickle.load(in_file)
-        else:
-            # dataset_path = '../../../../datasets/ILSVRC2015_VID'
-            # data_seq = build_dataset_and_init(
-            #     ImageNetVideoDataset, dataset_path, 'train')
-            # dataset_path = '../../../../datasets/OTB_2013_small'
-            dataset_path = DATASET_DIR
-            data_seq = build_dataset_and_init(OTBDataset, dataset_path)
-            with open(str(cache_file), 'wb') as out_file:
-                pickle.dump(data_seq, out_file,
-                            protocol=pickle.HIGHEST_PROTOCOL)
+        # cache_file = pathlib.Path(DATASET_CACHE_FILE)
+        # if cache_file.exists():
+        #     with open(str(cache_file), 'rb') as in_file:
+        #         data_seq = pickle.load(in_file)
+        # else:
+        #     # dataset_path = '../../../../datasets/ILSVRC2015_VID'
+        #     # data_seq = build_dataset_and_init(
+        #     #     ImageNetVideoDataset, dataset_path, 'train')
+        #     # dataset_path = '../../../../datasets/OTB_2013_small'
+        #     dataset_path = DATASET_DIR
+        #     data_seq = build_dataset_and_init(OTBDataset, dataset_path)
+        #     with open(str(cache_file), 'wb') as out_file:
+        #         pickle.dump(data_seq, out_file,
+        #                     protocol=pickle.HIGHEST_PROTOCOL)
         
-        pairwise_dataset = SiamesePairwiseDataset(data_seq, TrackerConfig())
+        data_seq = GOT10k(root_dir="../../../../datasets/GOT10k", subset='val')
+        pairwise_dataset = SiamesePairwiseDataset(
+            cast(Sequence, data_seq), TrackerConfig())
         
         return pairwise_dataset
     
