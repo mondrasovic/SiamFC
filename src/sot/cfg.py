@@ -4,7 +4,7 @@ import dataclasses
 @dataclasses.dataclass(frozen=True)
 class TrackerConfig:
     # Training parameters.
-    n_epochs: int = 50
+    n_epochs: int = 20
     batch_size: int = 8
     
     # Optimizer parameters.

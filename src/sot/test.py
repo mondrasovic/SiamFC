@@ -61,7 +61,7 @@ def main(imgs_dir_path: Optional[str]) -> int:
             cv.rectangle(frame, pt1, pt2, (0, 255, 0), 3, cv.LINE_AA)
         
         cv.imshow("tracking preview", frame)
-        key = cv.waitKey(0) & 0xff
+        key = cv.waitKey(1) & 0xff
         if key == ord('q'):
             break
     
@@ -70,6 +70,5 @@ def main(imgs_dir_path: Optional[str]) -> int:
 
 if __name__ == '__main__':
     import sys
-    
     
     sys.exit(main())

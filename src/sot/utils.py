@@ -51,60 +51,29 @@ def create_ground_truth_mask_and_weight(
     assert radius > 0, "radius must be positive"
     assert total_stride > 0, "total stride must be positive"
     assert batch_size > 0, "batch size must be positive"
-    
+
     width, height = size
-    
+
     xs = np.arange(width, dtype=np.float32) - (width - 1) / 2
     ys = np.arange(height, dtype=np.float32) - (height - 1) / 2
     XS, YS = np.meshgrid(xs, ys)
-    
+
     dist_matrix = np.sqrt(XS ** 2 + YS ** 2)
     mask_mat = np.zeros((height, width))
     mask_mat[dist_matrix <= radius / total_stride] = 1
     mask_mat = mask_mat[None, ...]  # Add channel dimension.
-    
-    import copy
-    
-    weight_mat = copy.deepcopy(mask_mat)
-    
+
+    weight_mat = np.empty_like(mask_mat)
+    weight_mat[mask_mat == 1] = 0.5 / np.sum(mask_mat == 1)
+    weight_mat[mask_mat == 0] = 0.5 / np.sum(mask_mat == 0)
+
     mask_mat = mask_mat[None, ...]  # Add batch dimension.
     mask_mat = np.repeat(mask_mat, batch_size, axis=0)
-    
+
     mask_mat = mask_mat.astype(np.float32)
     weight_mat = weight_mat.astype(np.float32)
-    
+
     return mask_mat, weight_mat
-
-
-# def create_ground_truth_mask_and_weight(
-#         size: Size, radius: float, total_stride: int,
-#         batch_size: int) -> Tuple[np.ndarray, np.ndarray]:
-#     assert radius > 0, "radius must be positive"
-#     assert total_stride > 0, "total stride must be positive"
-#     assert batch_size > 0, "batch size must be positive"
-#
-#     width, height = size
-#
-#     xs = np.arange(width, dtype=np.float32) - (width - 1) / 2
-#     ys = np.arange(height, dtype=np.float32) - (height - 1) / 2
-#     XS, YS = np.meshgrid(xs, ys)
-#
-#     dist_matrix = np.sqrt(XS ** 2 + YS ** 2)
-#     mask_mat = np.zeros((height, width))
-#     mask_mat[dist_matrix <= radius / total_stride] = 1
-#     mask_mat = mask_mat[None, ...]  # Add channel dimension.
-#
-#     weight_mat = np.empty_like(mask_mat)
-#     weight_mat[mask_mat == 1] = 0.5 / np.sum(mask_mat == 1)
-#     weight_mat[mask_mat == 0] = 0.5 / np.sum(mask_mat == 0)
-#
-#     mask_mat = mask_mat[None, ...]  # Add batch dimension.
-#     mask_mat = np.repeat(mask_mat, batch_size, axis=0)
-#
-#     mask_mat = mask_mat.astype(np.float32)
-#     weight_mat = weight_mat.astype(np.float32)
-#
-#     return mask_mat, weight_mat
 
 
 def cv_to_pil_img(img: np.ndarray) -> Image:
