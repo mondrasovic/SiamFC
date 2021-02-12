@@ -1,3 +1,5 @@
+import numbers
+
 from typing import Optional, Tuple, Union
 
 import cv2 as cv
@@ -9,6 +11,7 @@ from sot.bbox import BBox
 
 
 Size = Union[np.ndarray, Tuple[int, int]]
+ImageT = Union[np.ndarray, Image.Image]
 
 
 def calc_bbox_side_size_with_context(bbox: BBox) -> float:
@@ -124,3 +127,19 @@ def cv_img_to_tensor(
     
     # Swap channels to get [batch_size, channels, height, width].
     return tensor.permute(0, 3, 1, 2).float()
+
+
+def assure_numpy_img(img: ImageT) -> np.ndarray:
+    if isinstance(img, np.ndarray):
+        return img
+    elif isinstance(img, Image.Image):
+        return pil_to_cv_img(img)
+    else:
+        raise ValueError("unsupported image type")
+
+
+def assure_int_bbox(bbox: np.ndarray) -> np.ndarray:
+    if issubclass(bbox.dtype.type, numbers.Integral):
+        return bbox
+    else:
+        return bbox.round().astype(np.int)

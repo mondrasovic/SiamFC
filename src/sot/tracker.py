@@ -11,6 +11,7 @@ from model import SiamFCModel
 from sot.cfg import TrackerConfig
 from utils import (
     calc_bbox_side_size_with_context, center_crop_and_resize, cv_img_to_tensor,
+    assure_int_bbox, assure_numpy_img, ImageT
 )
 
 
@@ -46,7 +47,10 @@ class TrackerSiamFC(Tracker):
         self.exemplar_emb = None
     
     @torch.no_grad()
-    def init(self, img: np.ndarray, bbox: np.ndarray) -> None:
+    def init(self, img: ImageT, bbox: np.ndarray) -> None:
+        img = assure_numpy_img(img)
+        bbox = assure_int_bbox(bbox)
+        
         assert img.ndim == 3
         assert (len(bbox) == 4) and (bbox.ndim == 1)
         
@@ -86,7 +90,9 @@ class TrackerSiamFC(Tracker):
         self.exemplar_emb = self.exemplar_emb.repeat(self.cfg.n_scales, 1, 1, 1)
     
     @torch.no_grad()
-    def update(self, img: np.ndarray) -> np.ndarray:
+    def update(self, img: ImageT) -> np.ndarray:
+        img = assure_numpy_img(img)
+        
         assert img.ndim == 3
         
         # Search for the object over multiple different scales
