@@ -3,6 +3,8 @@ import unittest
 import numpy as np
 import torch
 
+from PIL import Image
+
 from sot.bbox import BBox
 from sot.utils import (
     center_crop_and_resize, create_ground_truth_mask_and_weight,
@@ -15,24 +17,21 @@ class TestCenterCropAndResize(unittest.TestCase):
     
     def setUp(self) -> None:
         width, height = 800, 600
-        self.img = np.full((height, width, 3), self.PIX_VALUE, dtype=np.uint8)
-    
-    def test_img_missing_channel_dim(self):
-        with self.assertRaises(AssertionError):
-            bbox = BBox(0, 0, 100, 100)
-            center_crop_and_resize(np.ones((300, 300)), bbox, (100, 100))
+        self.img = Image.fromarray(
+            np.full((height, width, 3), self.PIX_VALUE, dtype=np.uint8))
     
     def test_output_shape(self):
         bbox = BBox(0, 0, 100, 100)
         width, height = 127, 255
         patch = center_crop_and_resize(self.img, bbox, (width, height))
+        patch = np.asarray(patch)
         
         self.assertEqual(patch.shape, (height, width, 3))
     
     def test_bbox_within_image_no_padding(self):
         bbox = BBox(0, 0, 100, 100)
         patch = center_crop_and_resize(self.img, bbox, (127, 255))
-        patch_flat = patch.flatten()
+        patch_flat = np.asarray(patch).flatten()
         
         self.assertTrue(np.all(patch_flat == patch_flat[0]))
     
@@ -40,7 +39,7 @@ class TestCenterCropAndResize(unittest.TestCase):
         bbox = BBox(-50, -10, 200, 300)
         border = 127  # Value to fill the border with.
         patch = center_crop_and_resize(self.img, bbox, (127, 255), border)
-        patch_flat = patch.flatten()
+        patch_flat = np.asarray(patch).flatten()
         values = np.unique(patch_flat)
         
         self.assertTrue(len(values) > 1)

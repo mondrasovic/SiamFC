@@ -4,3 +4,13 @@ cache
 logs
 *.bin
 *.pth
+*.jpg
+*.JPG
+*.jpeg
+*.JPEG
+*.png
+*.PNG
+*.pdf
+*.PDF
+
+__pycache__/

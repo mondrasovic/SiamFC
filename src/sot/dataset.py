@@ -13,7 +13,9 @@ import cv2 as cv
 import numpy as np
 import torch
 from torch.utils.data import Dataset
-from torchvision.transforms import Compose, ToTensor
+from torchvision import transforms
+
+from PIL import Image
 
 from sot.bbox import BBox
 from sot.cfg import TrackerConfig
@@ -83,7 +85,7 @@ class ImageNetVideoDataset(TrackingDataset):
                 data_subset_dir = root_dir / 'Data' / 'VID' / subset
                 anno_subset_dir = root_dir / 'Annotations' / 'VID' / subset
                 
-                for seq_dir in anno_subset_dir.rglob(f'ILSVRC2015_{subset}_*'):
+                for seq_dir in anno_subset_dir.rglob(f"ILSVRC2015_{subset}_*"):
                     annos_xml_files = [
                         tuple(self._read_annos_from_xml(str(anno_xml_file)))
                         for anno_xml_file in seq_dir.glob('*.xml')]
@@ -121,7 +123,7 @@ class ImageNetVideoDataset(TrackingDataset):
         root = ET.ElementTree(file=xml_file_path).getroot()
         folder = root.find('folder').text
         filename = root.find('filename').text
-        img_file_path = os.path.join(folder, f'{filename}.JPEG')
+        img_file_path = os.path.join(folder, f"{filename}.JPEG")
         
         for object_node in root.findall('object'):
             track_id = object_node.find('trackid').text
@@ -201,9 +203,14 @@ class SiamesePairwiseDataset(Dataset):
         
         self.indices: np.ndarray = np.random.permutation(len(self.data_seq))
         
-        # TODO Add data augmentation.
-        self.transform_exemplar = Compose([ToTensor()])
-        self.transform_instance = Compose([ToTensor()])
+        img_transforms = transforms.Compose([
+            transforms.
+            transforms.ColorJitter(
+                brightness=0.1, contrast=0.1, saturation=0.1, hue=0.1),
+            transforms.ToTensor()])
+        
+        self.transform_exemplar = img_transforms
+        self.transform_instance = img_transforms
     
     def __getitem__(self, index: int) -> PairItemT:
         assert index >= 0
@@ -250,7 +257,7 @@ class SiamesePairwiseDataset(Dataset):
     @staticmethod
     def read_image_and_transform(
             img_path: str, anno: np.ndarray, output_side_size: int,
-            transform: Callable[[np.ndarray], torch.Tensor],
+            transform: Callable[[Image.Image], torch.Tensor],
             size_with_context_scale: float = 1.0) -> torch.Tensor:
         assert output_side_size > 0
         assert size_with_context_scale > 0
@@ -261,9 +268,7 @@ class SiamesePairwiseDataset(Dataset):
         new_size = (side_size_scaled, side_size_scaled)
         bbox.size = np.asarray(new_size).round().astype(np.int)  # !!!
         
-        img = cv.imread(img_path)
-        img = cv.cvtColor(img, cv.COLOR_BGR2RGB)
-        
+        img = Image.open(img_path)
         output_side = (output_side_size, output_side_size)
         patch = center_crop_and_resize(img, bbox, output_side)
         
@@ -282,9 +287,7 @@ if __name__ == '__main__':
     from typing import cast, Sequence
     from got10k.datasets import GOT10k
     
-    
     dataset = GOT10k(root_dir="../../../../datasets/GOT10k", subset='val')
-    print(dataset)
     pairwise_dataset = SiamesePairwiseDataset(
         cast(Sequence, dataset), TrackerConfig())
     count = 10

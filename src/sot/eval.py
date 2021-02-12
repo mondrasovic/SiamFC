@@ -17,12 +17,13 @@ def main(
         model_file_path: Optional[str]) -> int:
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     cfg = TrackerConfig()
+    
     tracker = TrackerSiamFC(cfg, device, model_file_path)
     experiment = ExperimentGOT10k(
         DATASET_DIR, subset='val', result_dir=results_dir_path,
         report_dir=reports_dir_path)
-    experiment.run(tracker, visualize=False)
     
+    experiment.run(tracker, visualize=False)
     experiment.report([tracker.name])
     
     return 0

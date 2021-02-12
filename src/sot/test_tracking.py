@@ -8,6 +8,7 @@ import torch
 
 from sot.cfg import TrackerConfig
 from sot.tracker import TrackerSiamFC
+from sot.utils import cv_to_pil_img
 
 
 def iter_video_capture() -> Iterable[np.ndarray]:
@@ -45,13 +46,12 @@ def main(imgs_dir_path: Optional[str], model_file_path: Optional[str]) -> int:
     
     for frame in imgs_iter:
         if is_first:
-            bbox = cv.selectROI("tracker initialization", frame)
-            # bbox = (463,288,131,101)
-            bbox = np.asarray(bbox)
-            tracker.init(frame, bbox)
+            # bbox = cv.selectROI("tracker initialization", frame)
+            bbox = np.asarray((463, 288, 131, 101))
+            tracker.init(cv_to_pil_img(frame), bbox)
             is_first = False
         else:
-            bbox_pred = tracker.update(frame)
+            bbox_pred = tracker.update(cv_to_pil_img(frame))
             pt1 = tuple(bbox_pred[:2])
             pt2 = tuple(bbox_pred[:2] + bbox_pred[2:])
             cv.rectangle(frame, pt1, pt2, (0, 255, 0), 3, cv.LINE_AA)

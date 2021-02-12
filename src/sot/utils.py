@@ -6,13 +6,14 @@ import cv2 as cv
 import numpy as np
 import torch
 
-from PIL import Image
+from torchvision import transforms
+from PIL import Image, ImageStat, ImageOps
 
 from sot.bbox import BBox
 
 
 Size = Union[np.ndarray, Tuple[int, int]]
-ImageT = Union[np.ndarray, Image.Image]
+ImageT = Image.Image
 
 
 def calc_bbox_side_size_with_context(bbox: BBox) -> float:
@@ -32,30 +33,24 @@ def calc_bbox_side_size_with_context(bbox: BBox) -> float:
 
 
 def center_crop_and_resize(
-        img: np.ndarray, bbox: BBox, target_size: Size,
+        img: ImageT, bbox: BBox, target_size: Size,
         border: Optional[Union[int, Tuple[int, ...]]] = None,
-        interpolation=cv.INTER_CUBIC) -> np.ndarray:
-    assert img.ndim == 3, "expected three dimensional image"
-    
-    # Size as width and height
+        interpolation=Image.BICUBIC) -> ImageT:
     bbox_corners = bbox.as_corners()
-    img_size = (img.shape[1], img.shape[0])
-    paddings = np.concatenate((-bbox_corners[:2], bbox_corners[2:] - img_size))
+    paddings = np.concatenate((-bbox_corners[:2], bbox_corners[2:] - img.size))
     max_padding = np.maximum(paddings, 0).max()
-    
+
     if max_padding > 0:
         if border is None:
-            border = tuple(int(c) for c in np.mean(img, axis=(0, 1)).round())
-        
-        img = cv.copyMakeBorder(
-            img, max_padding, max_padding, max_padding, max_padding,
-            borderType=cv.BORDER_CONSTANT, value=border)
+            border = tuple(int(round(c)) for c in ImageStat.Stat(img).mean)
+
+        img = ImageOps.expand(img, border=max_padding, fill=border)
         bbox_corners += max_padding
-    
-    patch = img[
-            bbox_corners[1]:bbox_corners[3], bbox_corners[0]:bbox_corners[2]]
-    patch = cv.resize(patch, dsize=target_size, interpolation=interpolation)
-    
+
+    bbox_corners = tuple((bbox_corners).astype(int))
+    patch = img.crop(bbox_corners)
+    patch = patch.resize(target_size, interpolation)
+
     return patch
 
 
@@ -124,6 +119,13 @@ def pil_to_cv_img(img: Image) -> np.ndarray:
     return cv.cvtColor(np.array(img), cv.COLOR_RGB2BGR)
 
 
+_pil_to_tensor_transform = transforms.PILToTensor()
+
+
+def pil_to_tensor(img: ImageT) -> torch.Tensor:
+    return _pil_to_tensor_transform(img).float()
+
+
 def cv_img_to_tensor(
         img: np.ndarray, device: Optional[torch.device] = None) -> torch.Tensor:
     assert 3 <= img.ndim <= 4, "expected image with 3 or 4 dimensions"
@@ -138,15 +140,6 @@ def cv_img_to_tensor(
     
     # Swap channels to get [batch_size, channels, height, width].
     return tensor.permute(0, 3, 1, 2).float()
-
-
-def assure_numpy_img(img: ImageT) -> np.ndarray:
-    if isinstance(img, np.ndarray):
-        return img
-    elif isinstance(img, Image.Image):
-        return pil_to_cv_img(img)
-    else:
-        raise ValueError("unsupported image type")
 
 
 def assure_int_bbox(bbox: np.ndarray) -> np.ndarray:
