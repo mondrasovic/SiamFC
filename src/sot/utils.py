@@ -126,22 +126,6 @@ def pil_to_tensor(img: ImageT) -> torch.Tensor:
     return _pil_to_tensor_transform(img).float()
 
 
-def cv_img_to_tensor(
-        img: np.ndarray, device: Optional[torch.device] = None) -> torch.Tensor:
-    assert 3 <= img.ndim <= 4, "expected image with 3 or 4 dimensions"
-    
-    tensor = torch.from_numpy(img)
-    
-    if device is not None:
-        tensor = tensor.to(device)
-    
-    if tensor.ndim == 3:  # A single image (height, width, channels).
-        tensor = tensor.unsqueeze(0)  # Add batch dimension.
-    
-    # Swap channels to get [batch_size, channels, height, width].
-    return tensor.permute(0, 3, 1, 2).float()
-
-
 def assure_int_bbox(bbox: np.ndarray) -> np.ndarray:
     if issubclass(bbox.dtype.type, numbers.Integral):
         return bbox

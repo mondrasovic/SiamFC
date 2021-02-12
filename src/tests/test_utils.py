@@ -7,8 +7,7 @@ from PIL import Image
 
 from sot.bbox import BBox
 from sot.utils import (
-    center_crop_and_resize, create_ground_truth_mask_and_weight,
-    cv_img_to_tensor,
+    center_crop_and_resize, create_ground_truth_mask_and_weight
 )
 
 
@@ -45,40 +44,6 @@ class TestCenterCropAndResize(unittest.TestCase):
         self.assertTrue(len(values) > 1)
         self.assertTrue(border in values)
         self.assertTrue(self.PIX_VALUE in values)
-
-
-class TestCvImgToTensor(unittest.TestCase):
-    PIX_VALUE = 255
-    
-    def setUp(self) -> None:
-        width, height = 800, 600
-        self.img = np.full((height, width, 3), self.PIX_VALUE, dtype=np.uint8)
-    
-    def test_wrong_n_dims_one_dim(self):
-        with self.assertRaises(AssertionError):
-            cv_img_to_tensor(np.ones(10))
-    
-    def test_wrong_n_dims_two_dims(self):
-        with self.assertRaises(AssertionError):
-            cv_img_to_tensor(np.ones((10, 20)))
-    
-    def test_wrong_n_dims_five_dims(self):
-        with self.assertRaises(AssertionError):
-            cv_img_to_tensor(np.ones((10, 20, 30, 40, 50)))
-    
-    def test_output_type(self):
-        self.assertTrue(isinstance(cv_img_to_tensor(self.img), torch.Tensor))
-    
-    def test_output_n_dims(self):
-        self.assertEqual(cv_img_to_tensor(self.img).ndim, 4)
-    
-    def test_output_dims_ordering(self):
-        n_batches, width, height, n_channels = 10, 800, 600, 3
-        tensor = cv_img_to_tensor(
-            np.ones((n_batches, height, width, n_channels)))
-        
-        self.assertEqual(
-            list(tensor.shape), [n_batches, n_channels, height, width])
 
 
 class TestCreateGroundTruthMaskAndWeight(unittest.TestCase):
