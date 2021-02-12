@@ -207,6 +207,7 @@ class SiamesePairwiseDataset(Dataset):
             transforms.ColorJitter(
                 brightness=0.1, contrast=0.1, saturation=0.1, hue=0.1),
             transforms.RandomHorizontalFlip(0.3),
+            transforms.RandomApply([transforms.RandomRotation(5)], 0.2),
             transforms.ToTensor()])
         
         self.transform_exemplar = img_transforms
@@ -290,7 +291,7 @@ if __name__ == '__main__':
     dataset = GOT10k(root_dir="../../../../datasets/GOT10k", subset='val')
     pairwise_dataset = SiamesePairwiseDataset(
         cast(Sequence, dataset), TrackerConfig())
-    count = 10
+    count = 20
     
     for i in range(count):
         exemplar_img, instance_img = pairwise_dataset[i]
