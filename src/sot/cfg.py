@@ -4,9 +4,9 @@ import dataclasses
 @dataclasses.dataclass(frozen=True)
 class TrackerConfig:
     # Training parameters.
-    n_epochs: int = 20
+    n_epochs: int = 50
     batch_size: int = 8
-    n_workers = 7
+    n_workers: int = 6
     
     # Optimizer parameters.
     weight_decay: float = 5.e-4
@@ -32,17 +32,17 @@ class TrackerConfig:
     response_size: int = 17  # Dimension of the output response (score) map.
     
     # Influence of cosine (Hanning) window on the response map.
-    cosine_win_influence = 0.176
+    cosine_win_influence: float = 0.176
     
     # Total stride of the network. It is used when mapping from the response
     # map position to the image position.
-    total_stride = 8
+    total_stride: int = 8
     
     # Radius in the basic response map as which denotes which cells should be
     # marked as 1, i.e., a positive class. All other cells are then considered
     # to belong to negative class, hence their value is 0. This radius is
     # measured from the center.
-    positive_class_radius = 16
+    positive_class_radius: int = 16
     
     # Upscale coefficient for the response map.
     # Change of size from 17x17 to 272x272.
@@ -67,9 +67,9 @@ class TrackerConfig:
     scale_penalty: float = 0.9745
 
 
-MODEL_DIR = "../../model.pth"
+CHECKPOINTS_DIR = "../../checkpoints"
 # DATASET_DIR = "../../../../datasets/simple_shape_dataset"
+# DATASET_DIR = "../../../../datasets/OTB_2013"
 DATASET_DIR = "../../../../datasets/GOT10k"
 LOG_DIR = "../../logs"
-RESULTS_DIR = "../../results"
-REPORTS_DIR = "../../reports"
+

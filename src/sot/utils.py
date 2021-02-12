@@ -1,9 +1,11 @@
 import numbers
+
 from typing import Optional, Tuple, Union
 
 import cv2 as cv
 import numpy as np
 import torch
+
 from PIL import Image
 
 from sot.bbox import BBox
@@ -14,6 +16,16 @@ ImageT = Union[np.ndarray, Image.Image]
 
 
 def calc_bbox_side_size_with_context(bbox: BBox) -> float:
+    # Exemplar and instance (search) sizes.
+    # The endeavor is to resize the image so that the bounding box plus the
+    # margin have a fixed area. In the original paper, the constraint was
+    #         s(w + 2p)s(h + 2p) = A,
+    # where p = (w + h) / 4, in other words, half of the average dimension,
+    # and A = 127^2. However, it can be implemented as
+    #         s = sqrt(A / ((w + p)(h + p)),
+    # given p = (w + h). The multiplication by 2 essentially cancels out
+    # the "half" in p.
+    
     context_size = bbox.size.mean()  # Average dimension.
     scaled_side_size = np.sqrt(np.prod(bbox.size + context_size))
     return scaled_side_size

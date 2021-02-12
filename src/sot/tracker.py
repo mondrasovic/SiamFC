@@ -15,9 +15,11 @@ from utils import (
 
 
 class TrackerSiamFC(Tracker):
-    def __init__(self, cfg: TrackerConfig, device: Union[torch.device, str],
-                 model_path: Optional[str] = None) -> None:
+    def __init__(
+            self, cfg: TrackerConfig, device: Union[torch.device, str],
+            model_path: Optional[str] = None) -> None:
         super().__init__(name='SiamFC', is_deterministic=True)
+        
         self.cfg: TrackerConfig = cfg
         
         if isinstance(device, torch.device):
@@ -52,16 +54,6 @@ class TrackerSiamFC(Tracker):
         
         assert img.ndim == 3
         assert (len(bbox) == 4) and (bbox.ndim == 1)
-        
-        # Exemplar and instance (search) sizes.
-        # The endeavor is to resize the image so that the bounding box plus the
-        # margin have a fixed area. In the original paper, the constraint was
-        #         s(w + 2p)s(h + 2p) = A,
-        # where p = (w + h) / 4, in other words, half of the average dimension,
-        # and A = 127^2. However, it can be implemented as
-        #         s = sqrt(A / ((w + p)(h + p)),
-        # given p = (w + h). The multiplication by 2 essentially cancels out
-        # the "half" in p.
         
         assert self.cfg.exemplar_size < self.cfg.instance_size
         

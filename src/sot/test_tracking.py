@@ -6,7 +6,7 @@ import cv2 as cv
 import numpy as np
 import torch
 
-from sot.cfg import MODEL_DIR, TrackerConfig
+from sot.cfg import TrackerConfig
 from sot.tracker import TrackerSiamFC
 
 
@@ -30,10 +30,11 @@ def iter_dir_imgs(dir_path: str) -> Iterable[np.ndarray]:
 
 @click.command()
 @click.option("-i", "--imgs-dir-path", help="directory path with images")
-def main(imgs_dir_path: Optional[str]) -> int:
+@click.option("--model-file-path", help="model file path")
+def main(imgs_dir_path: Optional[str], model_file_path: Optional[str]) -> int:
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     cfg = TrackerConfig()
-    tracker = TrackerSiamFC(cfg, device, MODEL_DIR)
+    tracker = TrackerSiamFC(cfg, device, model_file_path)
     
     is_first = True
     
@@ -65,6 +66,5 @@ def main(imgs_dir_path: Optional[str]) -> int:
 
 if __name__ == '__main__':
     import sys
-    
     
     sys.exit(main())
