@@ -47,7 +47,7 @@ class TrackerConfig:
     # Upscale coefficient for the response map.
     # Change of size from 17x17 to 272x272.
     response_upscale: int = 272 // 17
-
+    
     # Scaling coefficient to multiply the cells of the response map with.
     response_map_scale: float = 0.001
     

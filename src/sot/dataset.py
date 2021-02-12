@@ -282,6 +282,7 @@ if __name__ == '__main__':
     from typing import cast, Sequence
     from got10k.datasets import GOT10k
     
+    
     dataset = GOT10k(root_dir="../../../../datasets/GOT10k", subset='val')
     print(dataset)
     pairwise_dataset = SiamesePairwiseDataset(

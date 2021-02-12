@@ -6,7 +6,7 @@ import cv2 as cv
 import numpy as np
 import torch
 
-from sot.cfg import TrackerConfig, MODEL_DIR
+from sot.cfg import MODEL_DIR, TrackerConfig
 from sot.tracker import TrackerSiamFC
 
 
@@ -65,5 +65,6 @@ def main(imgs_dir_path: Optional[str]) -> int:
 
 if __name__ == '__main__':
     import sys
+    
     
     sys.exit(main())

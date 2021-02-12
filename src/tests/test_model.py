@@ -1,7 +1,7 @@
 import unittest
 
-import torch
 import numpy as np
+import torch
 
 from sot.model import SiamFCModel
 
@@ -76,12 +76,12 @@ class TestSiamFCModel(unittest.TestCase):
         
         exemplar_row, exemplar_col = 2, 10
         instance_emb[
-            exemplar_row:exemplar_row + exemplar_size,
-            exemplar_col:exemplar_col + exemplar_size, 0] = 1
-
+        exemplar_row:exemplar_row + exemplar_size,
+        exemplar_col:exemplar_col + exemplar_size, 0] = 1
+        
         exemplar_emb = to_tensor(exemplar_emb)
         instance_emb = to_tensor(instance_emb)
-
+        
         response = self.model.cross_corr(exemplar_emb, instance_emb).numpy()
         response = np.transpose(np.squeeze(response, axis=0), axes=(1, 2, 0))
         

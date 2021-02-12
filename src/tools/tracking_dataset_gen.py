@@ -1,12 +1,12 @@
 import abc
 import copy
-import click
-import tqdm
 import numbers
 import pathlib
 
+import click
 import cv2 as cv
 import numpy as np
+import tqdm
 from skimage.util import random_noise
 
 from sot.bbox import BBox
@@ -50,12 +50,12 @@ class MotionModel:
         self.img_center = self.img_size / 2
     
     def update(self, shift, apply_center_attraction):
-        self.velocity = self.friction * self.velocity +\
+        self.velocity = self.friction * self.velocity + \
                         (1 - self.friction) * shift
         
         if apply_center_attraction:
             center_diff = (self.img_center - self.bbox.center)
-            self.velocity = (1 - self.center_attraction) * self.velocity +\
+            self.velocity = (1 - self.center_attraction) * self.velocity + \
                             self.center_attraction * center_diff
         
         center_shift = self.velocity.round().astype(np.int)
@@ -209,7 +209,7 @@ def apply_noise(img):
     else:
         mode = np.random.choice(('gaussian', 'speckle', 'poisson', 'localvar'))
         noisy_img = random_noise(img, mode=mode)
-        
+    
     return (noisy_img * 255).round().astype(np.uint8)
 
 
@@ -273,5 +273,6 @@ def main(n_tracks, output_dir_path):
 
 if __name__ == '__main__':
     import sys
+    
     
     sys.exit(main())

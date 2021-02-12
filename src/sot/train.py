@@ -1,18 +1,16 @@
 import multiprocessing
-
-from typing import Sequence, cast
+from typing import cast, Sequence
 
 import click
 import numpy as np
 import torch
 import tqdm
-
 from got10k.datasets import GOT10k
 from torch import optim
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
-from sot.cfg import TrackerConfig, MODEL_DIR, LOG_DIR, DATASET_DIR
+from sot.cfg import DATASET_DIR, LOG_DIR, MODEL_DIR, TrackerConfig
 from sot.dataset import SiamesePairwiseDataset
 from sot.losses import WeightedBCELoss
 from sot.tracker import TrackerSiamFC
@@ -75,10 +73,10 @@ class SiamFCTrainer:
             for batch, (exemplar, instance) in enumerate(train_loader, start=1):
                 exemplar = exemplar.to(self.device)
                 instance = instance.to(self.device)
-            
+                
                 self.optimizer.zero_grad()
                 pred_response_maps = self.tracker.model(exemplar, instance)
-            
+                
                 loss = self.criterion(pred_response_maps, self.mask_mat)
                 loss.backward()
                 self.optimizer.step()
@@ -133,5 +131,6 @@ def main() -> int:
 
 if __name__ == '__main__':
     import sys
+    
     
     sys.exit(main())

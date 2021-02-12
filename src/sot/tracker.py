@@ -3,22 +3,21 @@ from typing import Iterable, Optional, Union
 import cv2 as cv
 import numpy as np
 import torch
-
 from got10k.trackers import Tracker
 
 from bbox import BBox
 from model import SiamFCModel
 from sot.cfg import TrackerConfig
 from utils import (
-    calc_bbox_side_size_with_context, center_crop_and_resize, cv_img_to_tensor,
-    assure_int_bbox, assure_numpy_img, ImageT
+    assure_int_bbox, assure_numpy_img, calc_bbox_side_size_with_context,
+    center_crop_and_resize, cv_img_to_tensor, ImageT,
 )
 
 
 class TrackerSiamFC(Tracker):
     def __init__(self, cfg: TrackerConfig, device: Union[torch.device, str],
                  model_path: Optional[str] = None) -> None:
-        super().__init__(name='SiamFC')
+        super().__init__(name='SiamFC', is_deterministic=True)
         self.cfg: TrackerConfig = cfg
         
         if isinstance(device, torch.device):
@@ -149,7 +148,7 @@ class TrackerSiamFC(Tracker):
         new_scale = (1 - self.cfg.scale_damping) * 1.0 + \
                     (self.cfg.scale_damping * peak_scale)
         self.curr_instance_side_size *= new_scale
-
+        
         # Change from [row, col] to [x, y] coordinates.
         self.target_bbox.shift(disp_in_image[::-1])
         self.target_bbox.rescale(new_scale, new_scale)
