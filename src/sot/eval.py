@@ -4,11 +4,8 @@ import torch
 
 from got10k.experiments import ExperimentGOT10k
 
-from sot.cfg import TrackerConfig
+from sot.cfg import TrackerConfig, MODEL_DIR
 from sot.tracker import TrackerSiamFC
-
-
-MODEL_DIR = "../../model.pth"
 
 
 @click.command()

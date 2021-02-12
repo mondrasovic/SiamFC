@@ -6,12 +6,8 @@ import cv2 as cv
 import numpy as np
 import torch
 
-from sot.cfg import TrackerConfig
+from sot.cfg import TrackerConfig, MODEL_DIR
 from sot.tracker import TrackerSiamFC
-
-
-MODEL_DIR = "../../model.pth"
-DATASET_DIR = "../../../../datasets/simple_shape_dataset"
 
 
 def iter_video_capture() -> Iterable[np.ndarray]:
@@ -27,7 +23,6 @@ def iter_video_capture() -> Iterable[np.ndarray]:
 
 def iter_dir_imgs(dir_path: str) -> Iterable[np.ndarray]:
     for file in pathlib.Path(dir_path).iterdir():
-        print(f'reading {file.name}')
         img = cv.imread(str(file), cv.IMREAD_COLOR)
         img = cv.cvtColor(img, cv.COLOR_BGR2RGB)
         yield img
@@ -49,8 +44,8 @@ def main(imgs_dir_path: Optional[str]) -> int:
     
     for frame in imgs_iter:
         if is_first:
-            # bbox = cv.selectROI("tracker initialization", frame)
-            bbox = (463,288,131,101)
+            bbox = cv.selectROI("tracker initialization", frame)
+            # bbox = (463,288,131,101)
             bbox = np.asarray(bbox)
             tracker.init(frame, bbox)
             is_first = False

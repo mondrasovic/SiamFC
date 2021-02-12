@@ -76,8 +76,6 @@ class TrackerSiamFC(Tracker):
             img, exemplar_bbox,
             (self.cfg.exemplar_size, self.cfg.exemplar_size))
         
-        # cv.imshow("exemplar image", exemplar_img)
-        
         self.model.eval()
         exemplar_img_tensor = cv_img_to_tensor(exemplar_img, self.device)
         self.exemplar_emb = self.model.extract_visual_features(
@@ -109,18 +107,6 @@ class TrackerSiamFC(Tracker):
             self.exemplar_emb, instances_features)
         # Remove the channel dimension, as it is just 1.
         responses = responses.squeeze(1).cpu().numpy()
-        
-        # import copy
-        # rr = copy.deepcopy(responses)
-        # for i, r in enumerate(rr, start=1):
-        #     r /= r.max()
-        #     r *= 255
-        #     r = r.round().astype(np.uint8)
-        #     r = cv.resize(r, (500, 500), interpolation=cv.INTER_CUBIC)
-        #     r = cv.applyColorMap(r, cv.COLORMAP_JET)
-        #     cv.imshow(f"{i:04d} response map", r)
-        # cv.waitKey(0)
-        # cv.destroyAllWindows()
         
         response_size_upscaled = (
             self.response_size_upscaled, self.response_size_upscaled)

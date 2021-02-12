@@ -76,6 +76,31 @@ def create_ground_truth_mask_and_weight(
     return mask_mat, weight_mat
 
 
+def cv_show_tensor_as_img(img: torch.Tensor, win_name: str) -> None:
+    img = img.cpu().detach().squeeze(0).numpy()
+    img = np.transpose(img, axes=(1, 2, 0))
+    cv.imshow(win_name, img)
+
+
+def cv_wait_key_and_destroy_all(delay: int = 0, quit_key: str = 'q') -> bool:
+    key = cv.waitKey(delay) & 0xff
+    cv.destroyAllWindows()
+    return key == ord(quit_key)
+
+
+def show_response_maps(
+        responses: np.ndarray, size: Size = (408, 408),
+        wait_key: int = 0) -> None:
+    for i, response in enumerate(responses, start=1):
+        response = ((response / response.max()) * 255).round().astype(np.uint8)
+        response = cv.resize(response, size, interpolation=cv.INTER_CUBIC)
+        response = cv.applyColorMap(response, cv.COLORMAP_JET)
+        cv.imshow(f"{i:04d} response map", response)
+    
+    cv.waitKey(wait_key)
+    cv.destroyAllWindows()
+
+
 def cv_to_pil_img(img: np.ndarray) -> Image:
     img = cv.cvtColor(img, cv.COLOR_BGR2RGB)
     return Image.fromarray(img)
