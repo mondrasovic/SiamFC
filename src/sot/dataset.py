@@ -204,9 +204,9 @@ class SiamesePairwiseDataset(Dataset):
         self.indices: np.ndarray = np.random.permutation(len(self.data_seq))
         
         img_transforms = transforms.Compose([
-            transforms.
             transforms.ColorJitter(
                 brightness=0.1, contrast=0.1, saturation=0.1, hue=0.1),
+            transforms.RandomHorizontalFlip(0.3),
             transforms.ToTensor()])
         
         self.transform_exemplar = img_transforms

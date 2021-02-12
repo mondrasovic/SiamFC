@@ -80,4 +80,4 @@ class BBox:
     def __repr__(self) -> str:
         x, y = self.center - self.size // 2
         width, height = self.size
-        return f'BBox({x},{y},{width},{height})'
+        return f'{self.__class__.__name__}({x},{y},{width},{height})'

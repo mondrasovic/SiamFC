@@ -105,8 +105,14 @@ class TestBBox(unittest.TestCase):
         self.assertTrue(bbox_rescaled is None)
         self.assertEqual(self.bbox.size.tolist(), [300, 400])
     
-    def test_repr(self):
-        self.assertEqual(self.bbox.__repr__(), 'BBox(10,20,300,400)')
+    def test_repr_str(self):
+        self.assertEqual(repr(self.bbox), f'BBox(10,20,300,400)')
+
+    def test_build_from_repr(self):
+        bbox_new = eval(repr(self.bbox))
+        
+        self.assertEqual(self.bbox.center.tolist(), bbox_new.center.tolist())
+        self.assertEqual(self.bbox.size.tolist(), bbox_new.size.tolist())
 
 
 if __name__ == '__main__':
