@@ -207,7 +207,7 @@ class SiamesePairwiseDataset(Dataset):
             transforms.ColorJitter(
                 brightness=0.1, contrast=0.1, saturation=0.1, hue=0.1),
             transforms.RandomHorizontalFlip(0.3),
-            transforms.RandomApply([transforms.RandomRotation(5)], 0.2),
+            transforms.RandomApply([transforms.RandomRotation(10)], 0.2),
             transforms.ToTensor()])
         
         self.transform_exemplar = img_transforms

@@ -52,10 +52,10 @@ class TrackerConfig:
     response_map_scale: float = 0.001
     
     # No. of different scales for object search.
-    n_scales: int = 5
+    n_scales: int = 3
     
     # Change in scale to search over.
-    scale_step: float = 1.025
+    scale_step: float = 1.0375  # 1.025
     
     # Scale linear interpolation (for smooth transition).
     scale_damping: float = 0.59
