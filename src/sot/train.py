@@ -174,7 +174,7 @@ class SiamFCTrainer:
 
 @click.command()
 @click.option("--checkpoint", help="checkpoint directory path")
-def main(checkpoint) -> int:
+def main(checkpoint: str) -> int:
     np.random.seed(731995)
     cfg = TrackerConfig()
     trainer = SiamFCTrainer(cfg, DATASET_DIR, CHECKPOINTS_DIR, LOG_DIR)
