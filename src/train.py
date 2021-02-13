@@ -113,7 +113,7 @@ class SiamFCTrainer:
                 losses_sum += curr_loss
                 curr_batch_loss = losses_sum / batch
                 
-                loss_text = f"loss: {curr_loss:.5f} [{curr_batch_loss:.4f}]"
+                loss_text = f"loss: {curr_loss:.5f} [{curr_batch_loss:.5f}]"
                 pbar.set_description(f"{epoch_text} | {loss_text}")
                 pbar.update()
         

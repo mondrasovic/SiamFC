@@ -5,10 +5,10 @@ import numpy as np
 import torch
 from got10k.trackers import Tracker
 
-from bbox import BBox
-from model import SiamFCModel
+from sot.bbox import BBox
+from sot.model import SiamFCModel
 from sot.cfg import TrackerConfig
-from utils import (
+from sot.utils import (
     assure_int_bbox, calc_bbox_side_size_with_context,
     center_crop_and_resize, pil_to_tensor, ImageT,
 )

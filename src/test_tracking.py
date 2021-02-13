@@ -18,14 +18,12 @@ def iter_video_capture() -> Iterable[np.ndarray]:
         ret, frame = cap.read()
         if not ret:
             break
-        frame = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
         yield frame
 
 
 def iter_dir_imgs(dir_path: str) -> Iterable[np.ndarray]:
     for file in pathlib.Path(dir_path).iterdir():
         img = cv.imread(str(file), cv.IMREAD_COLOR)
-        img = cv.cvtColor(img, cv.COLOR_BGR2RGB)
         yield img
 
 
