@@ -159,7 +159,6 @@ class SiamFCTrainer:
             'scheduler': self.lr_scheduler.state_dict(),
             'epoch': self.epoch,
             'loss': loss,
-            'numpy_seed': np.random.get_state()[1][0],
         }
         torch.save(checkpoint, checkpoint_file_path)
 
@@ -169,13 +168,12 @@ class SiamFCTrainer:
         self.optimizer.load_state_dict(checkpoint['optimizer'])
         self.lr_scheduler.load_state_dict(checkpoint['scheduler'])
         self.epoch = checkpoint['epoch'] + 1
-        np.random.seed(checkpoint['numpy_seed'])
 
 
 @click.command()
 @click.option("--checkpoint", help="checkpoint directory path")
 def main(checkpoint: str) -> int:
-    np.random.seed(731995)
+    # np.random.seed(731995)
     cfg = TrackerConfig()
     trainer = SiamFCTrainer(cfg, DATASET_DIR, CHECKPOINTS_DIR, LOG_DIR)
     

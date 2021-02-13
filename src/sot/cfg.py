@@ -6,7 +6,7 @@ class TrackerConfig:
     # Training parameters.
     n_epochs: int = 50
     batch_size: int = 8
-    n_workers: int = 6
+    n_workers: int = 7
     
     # Optimizer parameters.
     weight_decay: float = 5.e-4
@@ -16,17 +16,17 @@ class TrackerConfig:
     
     # Dataset parameters.
     # Number of pairs per each tracking sequence.
-    pairs_per_seq: int = 10
+    pairs_per_seq: int = 4
     # Exemplar (initial template) image side size.
     exemplar_size: int = 127
     # Search (future) image side size.
     instance_size: int = 255
     
     # No. of frames between exemplar and instance.
-    max_pair_dist: int = 20
+    max_pair_dist: int = 100
     
     # Minimum area of the bounding box to consider during training.
-    min_bbox_area: int = 10
+    min_bbox_area: int = 20
     
     # Inference parameters.
     response_size: int = 17  # Dimension of the output response (score) map.

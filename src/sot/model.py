@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.init as init
 import torch.nn.functional as F
 
 
@@ -43,6 +44,8 @@ class SiamFCModel(nn.Module):
         self.conv3 = _ConvBlock(in_channels=256, out_channels=384)
         self.conv4 = _ConvBlock(in_channels=384, out_channels=384)
         self.conv5 = _ConvBlock(in_channels=384, out_channels=256, groups=2)
+        
+        self._initialize_weights()
     
     def forward(
             self, exemplar: torch.Tensor,
@@ -82,3 +85,13 @@ class SiamFCModel(nn.Module):
             n_instances, -1, response_map.shape[-2], response_map.shape[-1])
         
         return response_map
+
+    def _initialize_weights(self) -> None:
+        for module in self.modules():
+            if isinstance(module, nn.Conv2d):
+                init.kaiming_normal_(
+                    module.weight.data, mode='fan_out', nonlinearity='relu')
+                module.bias.data.fill_(0)
+            elif isinstance(module, nn.BatchNorm2d):
+                module.weight.data.fill_(1)
+                module.bias.data.zero_()

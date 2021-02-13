@@ -44,8 +44,8 @@ def main(imgs_dir_path: Optional[str], model_file_path: Optional[str]) -> int:
     
     for frame in imgs_iter:
         if is_first:
-            # bbox = cv.selectROI("tracker initialization", frame)
-            bbox = np.asarray((463, 288, 131, 101))
+            # bbox = np.asarray(cv.selectROI("tracker initialization", frame))
+            bbox = np.asarray((122, 51, 51, 61))
             tracker.init(cv_to_pil_img(frame), bbox)
             is_first = False
         else:
