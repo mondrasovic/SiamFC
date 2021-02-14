@@ -215,8 +215,6 @@ class SiamesePairwiseDataset(Dataset):
         self.transform_instance = img_transforms
     
     def __getitem__(self, index: int) -> PairItemT:
-        assert index >= 0
-        
         index = self.indices[index % len(self.data_seq)]
         img_files, annos = self.data_seq[index]
         annos = annos.astype(np.int)
@@ -249,8 +247,6 @@ class SiamesePairwiseDataset(Dataset):
         return len(self.data_seq) * self.cfg.pairs_per_seq
     
     def sample_pair_indices(self, n_items: int) -> Tuple[int, int]:
-        assert n_items > 0
-        
         max_distance = min(n_items - 1, self.cfg.max_pair_dist)
         rand_indices = np.random.choice(max_distance + 1, 2)
         rand_start = np.random.randint(n_items - max_distance)
@@ -261,9 +257,6 @@ class SiamesePairwiseDataset(Dataset):
             img_path: str, anno: np.ndarray, output_side_size: int,
             transform: Callable[[Image.Image], torch.Tensor],
             size_with_context_scale: float = 1.0) -> torch.Tensor:
-        assert output_side_size > 0
-        assert size_with_context_scale > 0
-        
         bbox = BBox(*anno)
         side_size_with_context = calc_bbox_side_size_with_context(bbox)
         side_size_scaled = side_size_with_context * size_with_context_scale
@@ -273,7 +266,9 @@ class SiamesePairwiseDataset(Dataset):
         img = Image.open(img_path)
         output_side = (output_side_size, output_side_size)
         patch = center_crop_and_resize(img, bbox, output_side)
-        
+
+        if patch.mode == 'L':
+            patch = patch.convert('RGB')
         patch_tensor = transform(patch)
         
         return patch_tensor
