@@ -50,6 +50,8 @@ class SiamFCTrainer:
         weight_mat = torch.from_numpy(weight_mat).float()
         
         self.criterion = WeightedBCELoss(weight_mat).to(self.device)
+
+        # TODO Remove this.
         
         # self.optimizer = optim.SGD(
         #     self.tracker.model.parameters(), lr=self.cfg.initial_lr,
@@ -167,6 +169,7 @@ class SiamFCTrainer:
     def build_checkpoint_file_path_and_init(self) -> str:
         os.makedirs(self.checkpoint_dir_path, exist_ok=True)
         file_name = f"checkpoint_{self.epoch:03d}.pth"
+        file_name = "checkpoint_001.pth"  # TODO Remove this.
         return os.path.join(self.checkpoint_dir_path, file_name)
     
     def _save_checkpoint(self, loss: float, checkpoint_file_path: str) -> None:
