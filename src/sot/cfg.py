@@ -4,9 +4,9 @@ import dataclasses
 @dataclasses.dataclass(frozen=True)
 class TrackerConfig:
     # Training parameters.
-    n_epochs: int = 50
+    n_epochs: int = 100
     batch_size: int = 8
-    n_workers: int = 7
+    n_workers: int = 6
     
     # Optimizer parameters.
     weight_decay: float = 5.e-4
@@ -16,7 +16,7 @@ class TrackerConfig:
     
     # Dataset parameters.
     # Number of pairs per each tracking sequence.
-    pairs_per_seq: int = 4
+    pairs_per_seq: int = 32
     # Exemplar (initial template) image side size.
     exemplar_size: int = 127
     # Search (future) image side size.

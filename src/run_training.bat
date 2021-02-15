@@ -1,0 +1,1 @@
+python train.py OTB13 ../../../datasets/OTB_2013 -l ../logs -d ../checkpoints
