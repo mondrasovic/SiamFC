@@ -214,6 +214,7 @@ class SiamesePairwiseDataset(Dataset):
             transforms.RandomGrayscale(0.2),
             transforms.RandomApply([transforms.RandomRotation(10)], 0.2),
             transforms.ToTensor()])
+        img_transforms = transforms.Compose([transforms.ToTensor()])
         
         self.transform_exemplar = img_transforms
         self.transform_instance = img_transforms
@@ -287,7 +288,6 @@ def build_dataset_and_init(cls, *args, **kwargs):
 if __name__ == '__main__':
     from typing import cast, Sequence
     from got10k.datasets import GOT10k
-    
     
     dataset = GOT10k(root_dir="../../../../datasets/GOT10k", subset='val')
     pairwise_dataset = SiamesePairwiseDataset(
