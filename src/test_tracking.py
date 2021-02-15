@@ -1,3 +1,8 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+# Author: Milan Ondrasovic <milan.ondrasovic@gmail.com>
+
 import sys
 import pathlib
 from typing import Iterable, Optional
@@ -30,7 +35,7 @@ def iter_dir_imgs(dir_path: str) -> Iterable[np.ndarray]:
 
 @click.command()
 @click.option("-i", "--imgs-dir-path", help="directory path with images")
-@click.option("-m", "--model-file-path", help="model file path")
+@click.option("-m", "--model-file-path", help="a pre-trained model file path")
 def main(imgs_dir_path: Optional[str], model_file_path: Optional[str]) -> int:
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     cfg = TrackerConfig()

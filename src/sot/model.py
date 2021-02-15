@@ -1,3 +1,8 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+# Author: Milan Ondrasovic <milan.ondrasovic@gmail.com>
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F

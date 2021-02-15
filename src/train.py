@@ -1,4 +1,8 @@
-import enum
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+# Author: Milan Ondrasovic <milan.ondrasovic@gmail.com>
+
 import multiprocessing
 import os
 import sys
@@ -13,18 +17,12 @@ from torch import optim
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
+from common import DatasetType
 from sot.cfg import TrackerConfig
 from sot.dataset import SiamesePairwiseDataset
 from sot.losses import WeightedBCELoss
 from sot.tracker import TrackerSiamFC
 from sot.utils import create_ground_truth_mask_and_weight
-
-
-@enum.unique
-class DatasetType(enum.Enum):
-    GOT10K = 'GOT10k'
-    OTB13 = 'OTB13'
-    OTB15 = 'OTB15'
 
 
 class SiamFCTrainer:
@@ -185,13 +183,6 @@ class SiamFCTrainer:
         self.epoch = checkpoint['epoch'] + 1
 
 
-def decode_dataset_type(dataset_name: str) -> DatasetType:
-    for dataset_item in DatasetType:
-        if dataset_item.value == dataset_name:
-            return dataset_item
-    raise ValueError("unrecognized dataset type")
-
-
 @click.command()
 @click.argument("dataset_name")
 @click.argument("dataset_dir_path")
@@ -213,7 +204,7 @@ def main(
     """
     np.random.seed(731995)
     
-    dataset_type = decode_dataset_type(dataset_name)
+    dataset_type = DatasetType.decode_dataset_type(dataset_name)
     cfg = TrackerConfig()
     trainer = SiamFCTrainer(
         cfg, dataset_dir_path, dataset_type, checkpoints_dir_path, log_dir_path)
