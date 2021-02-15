@@ -201,7 +201,7 @@ def main(
         checkpoint_file_path: Optional[str]) -> int:
     """
     Starts a SiamFC training with the specific DATASET_NAME
-    (GOT10k | OTB13 | OTB15) located in the DATASET_DIR_PATH.
+    (GOT10k | OTB13 | OTB15 | VOT15) located in the DATASET_DIR_PATH.
     """
     np.random.seed(731995)
     
