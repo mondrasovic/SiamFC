@@ -12,6 +12,7 @@ class TrackerConfig:
     n_epochs: int = 100
     batch_size: int = 8
     n_workers: int = 6
+    free_cpus: int = 0
     
     # Optimizer parameters.
     weight_decay: float = 5.e-4

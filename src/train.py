@@ -69,7 +69,8 @@ class SiamFCTrainer:
         
         pairwise_dataset = self.init_pairwise_dataset()
         n_workers = max(
-            1, min(self.cfg.n_workers, multiprocessing.cpu_count() - 1))
+            1, min(self.cfg.n_workers,
+                   multiprocessing.cpu_count() - self.cfg.free_cpus))
         pin_memory = torch.cuda.is_available()
         
         train_loader = DataLoader(
