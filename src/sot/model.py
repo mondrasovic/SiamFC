@@ -7,16 +7,20 @@ import torch.nn.init as init
 class _ConvBlock(nn.Module):
     def __init__(
             self, in_channels: int, out_channels: int, *, kernel_size: int = 3,
-            stride: int = 1, groups: int = 1, max_pool: bool = False) -> None:
+            stride: int = 1, groups: int = 1, activation: bool = True,
+            max_pool: bool = False) -> None:
         super().__init__()
         
         modules = [
             nn.Conv2d(
                 in_channels=in_channels, out_channels=out_channels,
                 kernel_size=kernel_size, stride=stride, groups=groups,
-                bias=True),
-            nn.BatchNorm2d(num_features=out_channels, eps=1e-6, momentum=0.05),
-            nn.ReLU(inplace=True)]
+                bias=True)]
+        
+        if activation:
+            modules.append(nn.BatchNorm2d(
+                num_features=out_channels, eps=1e-6, momentum=0.05))
+            modules.append(nn.ReLU(inplace=True))
         
         if max_pool:
             modules.append(nn.MaxPool2d(kernel_size=3, stride=2))
@@ -43,7 +47,8 @@ class SiamFCModel(nn.Module):
             max_pool=True)
         self.conv3 = _ConvBlock(in_channels=256, out_channels=384)
         self.conv4 = _ConvBlock(in_channels=384, out_channels=384)
-        self.conv5 = _ConvBlock(in_channels=384, out_channels=256, groups=2)
+        self.conv5 = _ConvBlock(
+            in_channels=384, out_channels=256, groups=2, activation=False)
         
         self._initialize_weights()
     

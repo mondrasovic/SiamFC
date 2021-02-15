@@ -1,3 +1,4 @@
+import sys
 from typing import Optional
 
 import click
@@ -31,7 +32,4 @@ def main(
 
 
 if __name__ == '__main__':
-    import sys
-    
-    
     sys.exit(main())

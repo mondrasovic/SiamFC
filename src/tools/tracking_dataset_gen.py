@@ -1,3 +1,4 @@
+import sys
 import abc
 import copy
 import numbers
@@ -272,7 +273,4 @@ def main(n_tracks, output_dir_path):
 
 
 if __name__ == '__main__':
-    import sys
-    
-    
     sys.exit(main())

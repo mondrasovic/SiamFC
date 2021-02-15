@@ -75,7 +75,6 @@ def create_ground_truth_mask_and_weight(
     n_negatives = np.sum(mask_mat == 0)
     weight_mat[mask_mat == 1] = 0.5 / n_positives
     weight_mat[mask_mat == 0] = 0.5 / n_negatives
-    weight_mat *= n_positives + n_negatives
     
     mask_mat = mask_mat[None, ...]  # Add batch dimension.
     mask_mat = np.repeat(mask_mat, batch_size, axis=0)
