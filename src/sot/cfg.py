@@ -65,11 +65,3 @@ class TrackerConfig:
     # 0.8, 0.9, 1, 1.1, 1.2, then all these response maps except for the one in
     # the middle would be additionally multiplied by this penalty term.
     scale_penalty: float = 0.9745
-
-
-CHECKPOINTS_DIR = "../../checkpoints"
-# DATASET_DIR = "../../../../datasets/simple_shape_dataset"
-# DATASET_DIR = "../../../../datasets/OTB_2013"
-DATASET_DIR = "../../../../datasets/GOT10k"
-LOG_DIR = "../../logs"
-

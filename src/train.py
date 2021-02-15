@@ -1,5 +1,6 @@
 import os
 import sys
+import enum
 import click
 import multiprocessing
 from typing import cast, Sequence, Optional
@@ -12,21 +13,29 @@ from torch import optim
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
-from sot.cfg import DATASET_DIR, LOG_DIR, CHECKPOINTS_DIR, TrackerConfig
+from sot.cfg import TrackerConfig
 from sot.dataset import SiamesePairwiseDataset
 from sot.losses import WeightedBCELoss
 from sot.tracker import TrackerSiamFC
 from sot.utils import create_ground_truth_mask_and_weight
 
 
+@enum.unique
+class DatasetType(enum.Enum):
+    GOT10K = 'GOT10k'
+    OTB13 = 'OTB13'
+    OTB15 = 'OTB15'
+
+
 class SiamFCTrainer:
     def __init__(
-            self, cfg: TrackerConfig,
-            dataset_dir_path: str,
+            self, cfg: TrackerConfig, dataset_dir_path: str,
+            dataset_type: DatasetType,
             checkpoint_dir_path: Optional[str] = None,
             log_dir_path: Optional[str] = None) -> None:
         self.cfg: TrackerConfig = cfg
         self.dataset_dir_path: str = dataset_dir_path
+        self.dataset_type: DatasetType = dataset_type
         self.checkpoint_dir_path: Optional[str] = checkpoint_dir_path
         self.log_dir_path: Optional[str] = log_dir_path
         
@@ -60,7 +69,7 @@ class SiamFCTrainer:
         else:
             writer = SummaryWriter(self.log_dir_path)
         
-        pairwise_dataset = self.init_pairwise_dataset(self.dataset_dir_path)
+        pairwise_dataset = self.init_pairwise_dataset()
         n_workers = max(
             1, min(self.cfg.n_workers, multiprocessing.cpu_count() - 1))
         pin_memory = torch.cuda.is_available()
@@ -122,10 +131,16 @@ class SiamFCTrainer:
         
         return batch_loss
     
-    @staticmethod
-    def init_pairwise_dataset(dataset_dir_path) -> SiamesePairwiseDataset:
-        data_seq = GOT10k(root_dir=dataset_dir_path, subset='train')
-        # data_seq = OTB(root_dir=dataset_dir_path, version=2013)
+    def init_pairwise_dataset(self) -> SiamesePairwiseDataset:
+        if self.dataset_type == DatasetType.GOT10K:
+            data_seq = GOT10k(root_dir=self.dataset_dir_path, subset='train')
+        elif self.dataset_type == DatasetType.OTB13:
+            data_seq = OTB(root_dir=self.dataset_dir_path, version=2013)
+        elif self.dataset_type == DatasetType.OTB15:
+            data_seq = OTB(root_dir=self.dataset_dir_path, version=2015)
+        else:
+            raise ValueError(f"unsupported dataset type: {self.dataset_type}")
+        
         pairwise_dataset = SiamesePairwiseDataset(
             cast(Sequence, data_seq), TrackerConfig())
         
@@ -170,17 +185,39 @@ class SiamFCTrainer:
         self.epoch = checkpoint['epoch'] + 1
 
 
+def decode_dataset_type(dataset_name: str) -> DatasetType:
+    for dataset_item in DatasetType:
+        if dataset_item.value == dataset_name:
+            return dataset_item
+    raise ValueError("unrecognized dataset type")
+
+
 @click.command()
-@click.option("--checkpoint", help="checkpoint directory path")
-def main(checkpoint: str) -> int:
-    # np.random.seed(731995)
-    cfg = TrackerConfig()
-    trainer = SiamFCTrainer(cfg, DATASET_DIR, CHECKPOINTS_DIR, LOG_DIR)
+@click.argument("dataset_name")
+@click.argument("dataset_dir_path")
+@click.option(
+    "-l", "--log-dir-path",
+    help="directory path to save the tensorboard logs")
+@click.option(
+    "-d", "--checkpoints-dir-path", help="directory path to save checkpoints")
+@click.option(
+    "-c", "--checkpoint-file-path",
+    help="checkpoint file path to start the training from")
+def main(
+        dataset_name: str, dataset_dir_path: str, log_dir_path: Optional[str],
+        checkpoints_dir_path: Optional[str],
+        checkpoint_file_path: Optional[str]) -> int:
+    """
+    Starts a SiamFC training with the specific DATASET_NAME
+    (GOT10k | OTB13 | OTB15) located in the DATASET_DIR_PATH.
+    """
+    np.random.seed(731995)
     
-    if checkpoint is None:
-        trainer.run()
-    else:
-        trainer.run(checkpoint)
+    dataset_type = decode_dataset_type(dataset_name)
+    cfg = TrackerConfig()
+    trainer = SiamFCTrainer(
+        cfg, dataset_dir_path, dataset_type, checkpoints_dir_path, log_dir_path)
+    trainer.run(checkpoint_file_path)
     
     return 0
 
