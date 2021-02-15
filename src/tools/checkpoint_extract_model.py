@@ -15,4 +15,5 @@ def main(checkpoint_file_path, model_output_file_path):
 if __name__ == '__main__':
     import sys
     
+    
     sys.exit(main())

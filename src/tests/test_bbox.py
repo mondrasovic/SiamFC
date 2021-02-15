@@ -107,7 +107,7 @@ class TestBBox(unittest.TestCase):
     
     def test_repr_str(self):
         self.assertEqual(repr(self.bbox), 'BBox(10,20,300,400)')
-
+    
     def test_build_from_repr(self):
         bbox_new = eval(repr(self.bbox))
         

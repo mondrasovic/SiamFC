@@ -1,13 +1,11 @@
 import unittest
 
 import numpy as np
-import torch
-
 from PIL import Image
 
 from sot.bbox import BBox
 from sot.utils import (
-    center_crop_and_resize, create_ground_truth_mask_and_weight
+    center_crop_and_resize, create_ground_truth_mask_and_weight,
 )
 
 

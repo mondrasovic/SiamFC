@@ -1,13 +1,11 @@
 import numbers
-
 from typing import Optional, Tuple, Union
 
 import cv2 as cv
 import numpy as np
 import torch
-
+from PIL import Image, ImageOps, ImageStat
 from torchvision import transforms
-from PIL import Image, ImageStat, ImageOps
 
 from sot.bbox import BBox
 
@@ -39,18 +37,18 @@ def center_crop_and_resize(
     bbox_corners = bbox.as_corners()
     paddings = np.concatenate((-bbox_corners[:2], bbox_corners[2:] - img.size))
     max_padding = np.maximum(paddings, 0).max()
-
+    
     if max_padding > 0:
         if border is None:
             border = tuple(int(round(c)) for c in ImageStat.Stat(img).mean)
-
+        
         img = ImageOps.expand(img, border=max_padding, fill=border)
         bbox_corners += max_padding
-
+    
     bbox_corners = tuple((bbox_corners).astype(int))
     patch = img.crop(bbox_corners)
     patch = patch.resize(target_size, interpolation)
-
+    
     return patch
 
 

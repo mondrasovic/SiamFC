@@ -1,10 +1,10 @@
+import enum
+import multiprocessing
 import os
 import sys
-import enum
-import click
-import multiprocessing
-from typing import cast, Sequence, Optional
+from typing import cast, Optional, Sequence
 
+import click
 import numpy as np
 import torch
 import tqdm
@@ -81,7 +81,7 @@ class SiamFCTrainer:
         if checkpoint_file_path is None:
             self.epoch = 1
         else:
-            self.load_checkpoint(checkpoint_file_path)
+            self._load_checkpoint(checkpoint_file_path)
         
         self.tracker.model.train()
         
@@ -92,7 +92,7 @@ class SiamFCTrainer:
                 writer.add_scalar('Loss/train', loss, self.epoch)
             
             if self.checkpoint_dir_path is not None:
-                self.save_checkpoint(
+                self._save_checkpoint(
                     loss, self.build_checkpoint_file_path_and_init())
             
             self.epoch += 1
@@ -167,7 +167,7 @@ class SiamFCTrainer:
         file_name = f"checkpoint_{self.epoch:03d}.pth"
         return os.path.join(self.checkpoint_dir_path, file_name)
     
-    def save_checkpoint(self, loss: float, checkpoint_file_path: str) -> None:
+    def _save_checkpoint(self, loss: float, checkpoint_file_path: str) -> None:
         checkpoint = {
             'model': self.tracker.model.state_dict(),
             'optimizer': self.optimizer.state_dict(),
@@ -176,8 +176,8 @@ class SiamFCTrainer:
             'loss': loss,
         }
         torch.save(checkpoint, checkpoint_file_path)
-
-    def load_checkpoint(self, checkpoint_file_path: str) -> None:
+    
+    def _load_checkpoint(self, checkpoint_file_path: str) -> None:
         checkpoint = torch.load(checkpoint_file_path)
         self.tracker.model.load_state_dict(checkpoint['model'])
         self.optimizer.load_state_dict(checkpoint['optimizer'])

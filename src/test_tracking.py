@@ -65,4 +65,5 @@ def main(imgs_dir_path: Optional[str], model_file_path: Optional[str]) -> int:
 if __name__ == '__main__':
     import sys
     
+    
     sys.exit(main())

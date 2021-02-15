@@ -12,10 +12,9 @@ from typing import (
 import cv2 as cv
 import numpy as np
 import torch
+from PIL import Image
 from torch.utils.data import Dataset
 from torchvision import transforms
-
-from PIL import Image
 
 from sot.bbox import BBox
 from sot.cfg import TrackerConfig
@@ -266,7 +265,7 @@ class SiamesePairwiseDataset(Dataset):
         img = Image.open(img_path)
         output_side = (output_side_size, output_side_size)
         patch = center_crop_and_resize(img, bbox, output_side)
-
+        
         if patch.mode == 'L':
             patch = patch.convert('RGB')
         patch_tensor = transform(patch)
@@ -283,6 +282,7 @@ def build_dataset_and_init(cls, *args, **kwargs):
 if __name__ == '__main__':
     from typing import cast, Sequence
     from got10k.datasets import GOT10k
+    
     
     dataset = GOT10k(root_dir="../../../../datasets/GOT10k", subset='val')
     pairwise_dataset = SiamesePairwiseDataset(

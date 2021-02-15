@@ -6,11 +6,11 @@ import torch
 from got10k.trackers import Tracker
 
 from sot.bbox import BBox
-from sot.model import SiamFCModel
 from sot.cfg import TrackerConfig
+from sot.model import SiamFCModel
 from sot.utils import (
-    assure_int_bbox, calc_bbox_side_size_with_context,
-    center_crop_and_resize, pil_to_tensor, ImageT,
+    assure_int_bbox, calc_bbox_side_size_with_context, center_crop_and_resize,
+    ImageT, pil_to_tensor,
 )
 
 
@@ -50,7 +50,7 @@ class TrackerSiamFC(Tracker):
     @torch.no_grad()
     def init(self, img: ImageT, bbox: np.ndarray) -> None:
         assert (len(bbox) == 4) and (bbox.ndim == 1)
-
+        
         self.model.eval()
         
         bbox = assure_int_bbox(bbox)

@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
-import torch.nn.init as init
 import torch.nn.functional as F
+import torch.nn.init as init
 
 
 class _ConvBlock(nn.Module):
@@ -85,7 +85,7 @@ class SiamFCModel(nn.Module):
             n_instances, -1, response_map.shape[-2], response_map.shape[-1])
         
         return response_map
-
+    
     def _initialize_weights(self) -> None:
         for module in self.modules():
             if isinstance(module, nn.Conv2d):
