@@ -54,8 +54,6 @@ class TrackerSiamFC(Tracker):
     
     @torch.no_grad()
     def init(self, img: ImageT, bbox: np.ndarray) -> None:
-        assert (len(bbox) == 4) and (bbox.ndim == 1)
-        
         self.model.eval()
         
         bbox = assure_int_bbox(bbox)
@@ -77,10 +75,6 @@ class TrackerSiamFC(Tracker):
         exemplar_img_tensor = exemplar_img_tensor.to(self.device)
         self.exemplar_emb = self.model.extract_visual_features(
             exemplar_img_tensor)
-        # Copy the exemplar as many times as we have scale factors. Since we
-        # employ the trick with grouped convolutions, the embedding vector needs
-        # to be present for each group.
-        self.exemplar_emb = self.exemplar_emb.repeat(self.cfg.n_scales, 1, 1, 1)
     
     @torch.no_grad()
     def update(self, img: ImageT) -> np.ndarray:
@@ -160,8 +154,6 @@ class TrackerSiamFC(Tracker):
     
     @staticmethod
     def create_square_cosine_window(size: int) -> np.ndarray:
-        assert size > 0
-        
         # Create a normalized cosine (Hanning) window.
         hanning_1d = np.hanning(size)
         hanning_2d = np.outer(hanning_1d, hanning_1d)
@@ -171,8 +163,6 @@ class TrackerSiamFC(Tracker):
     
     @staticmethod
     def create_search_scales(scale_step: float, count: int) -> np.ndarray:
-        assert count > 0
-        
         n_half_search_scales = count // 2
         search_scales = scale_step ** np.linspace(
             -n_half_search_scales, n_half_search_scales, count)

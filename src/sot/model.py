@@ -49,7 +49,7 @@ class SiamFCModel(nn.Module):
             in_channels=96, out_channels=256, kernel_size=5, groups=2,
             max_pool=True)
         self.conv3 = _ConvBlock(in_channels=256, out_channels=384)
-        self.conv4 = _ConvBlock(in_channels=384, out_channels=384)
+        self.conv4 = _ConvBlock(in_channels=384, out_channels=384, groups=2)
         self.conv5 = _ConvBlock(
             in_channels=384, out_channels=256, groups=2, activation=False)
         
