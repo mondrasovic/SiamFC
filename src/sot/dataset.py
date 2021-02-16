@@ -215,7 +215,7 @@ class SiamesePairwiseDataset(Dataset):
             transforms.RandomApply([transforms.RandomRotation(5)], 0.2),
             transforms.ToTensor()])
         # TODO Remove this.
-        img_transforms = transforms.Compose([transforms.ToTensor()])
+        # img_transforms = transforms.Compose([transforms.ToTensor()])
         
         self.transform_exemplar = img_transforms
         self.transform_instance = img_transforms
