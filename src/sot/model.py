@@ -40,8 +40,6 @@ class SiamFCModel(nn.Module):
     def __init__(self, response_map_scale: float = 0.001) -> None:
         super().__init__()
         
-        assert response_map_scale > 0, "response map scale must be positive"
-        
         self.response_map_scale: float = response_map_scale
         
         self.conv1 = _ConvBlock(
@@ -83,14 +81,13 @@ class SiamFCModel(nn.Module):
     def cross_corr(
             exemplar_emb: torch.Tensor,
             instance_emb: torch.Tensor) -> torch.Tensor:
-        assert exemplar_emb.ndim == instance_emb.ndim
-        assert exemplar_emb.ndim == 4
-        
+        n_exemplars = exemplar_emb.shape[0]
         n_instances, instance_c, instance_h, instance_w = instance_emb.shape
         
-        instance_emb = instance_emb.reshape(1, -1, instance_h, instance_w)
+        instance_emb = instance_emb.reshape(
+            -1, n_exemplars * instance_c, instance_h, instance_w)
         response_map = F.conv2d(
-            input=instance_emb, weight=exemplar_emb, groups=n_instances)
+            input=instance_emb, weight=exemplar_emb, groups=n_exemplars)
         response_map = response_map.reshape(
             n_instances, -1, response_map.shape[-2], response_map.shape[-1])
         

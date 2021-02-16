@@ -54,6 +54,13 @@ class TestSiamFCModel(unittest.TestCase):
         response_map = self.model.cross_corr(exemplar_emb, instance_emb)
         
         self.assertEqual(list(response_map.shape), [1, 1, 17, 17])
+
+    def test_response_map_shape_one_exemplar_multiple_instances(self):
+        exemplar_emb = torch.ones(1, 10, 6, 6)
+        instance_emb = torch.ones(10, 10, 22, 22)
+        response_map = self.model.cross_corr(exemplar_emb, instance_emb)
+    
+        self.assertEqual(list(response_map.shape), [10, 1, 17, 17])
     
     def test_response_map_shape_multiple_channels_multiple_instances(self):
         exemplar_emb = torch.ones(10, 10, 6, 6)
@@ -61,12 +68,6 @@ class TestSiamFCModel(unittest.TestCase):
         response_map = self.model.cross_corr(exemplar_emb, instance_emb)
         
         self.assertEqual(list(response_map.shape), [10, 1, 17, 17])
-    
-    def test_cross_correlation_invalid_shapes(self):
-        with self.assertRaises(AssertionError):
-            exemplar_emb = torch.ones((1, 1, 1))
-            instance_emb = torch.ones(1, 10, 5, 5)
-            self.model.cross_corr(exemplar_emb, instance_emb)
     
     def test_cross_correlation_white_rectangle_search(self):
         def to_tensor(arr):
