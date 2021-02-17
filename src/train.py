@@ -46,6 +46,7 @@ class SiamFCTrainer:
         mask_mat, weight_mat = create_ground_truth_mask_and_weight(
             response_map_size, self.cfg.positive_class_radius,
             self.cfg.total_stride, self.cfg.batch_size)
+        
         self.mask_mat = torch.from_numpy(mask_mat).float().to(self.device)
         weight_mat = torch.from_numpy(weight_mat).float().to(self.device)
         
