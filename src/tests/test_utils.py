@@ -71,7 +71,8 @@ class TestCreateGroundTruthMaskAndWeight(unittest.TestCase):
     def test_output_weight_mat_shape(self):
         self.assertEqual(
             self.weight_mat.shape,
-            (1, self.RESPONSE_MAP_HEIGHT, self.RESPONSE_MAP_WIDTH))
+            (self.BATCH_SIZE, 1, self.RESPONSE_MAP_HEIGHT,
+             self.RESPONSE_MAP_WIDTH))
     
     def test_mask_contains_only_ones_and_zeros(self):
         unique_values = np.unique(self.mask_mat)

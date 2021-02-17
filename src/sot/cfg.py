@@ -11,7 +11,7 @@ class TrackerConfig:
     # Training parameters.
     n_epochs: int = 50
     batch_size: int = 8
-    n_workers: int = 5
+    n_workers: int = 8
     free_cpus: int = 0
     
     # Optimizer parameters.
@@ -22,7 +22,7 @@ class TrackerConfig:
     
     # Dataset parameters.
     # Number of pairs per each tracking sequence.
-    pairs_per_seq: int = 10
+    pairs_per_seq: int = 1
     # Exemplar (initial template) image side size.
     exemplar_size: int = 127
     # Search (future) image side size.

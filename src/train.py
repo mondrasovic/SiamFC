@@ -47,7 +47,7 @@ class SiamFCTrainer:
             response_map_size, self.cfg.positive_class_radius,
             self.cfg.total_stride, self.cfg.batch_size)
         self.mask_mat = torch.from_numpy(mask_mat).float().to(self.device)
-        weight_mat = torch.from_numpy(weight_mat).float()
+        weight_mat = torch.from_numpy(weight_mat).float().to(self.device)
         
         self.criterion = WeightedBCELoss(weight_mat).to(self.device)
         
