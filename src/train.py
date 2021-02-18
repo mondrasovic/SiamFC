@@ -126,7 +126,8 @@ class SiamFCTrainer:
                 pbar.set_description(f"{epoch_text} | {loss_text}")
                 pbar.update()
         
-        self.lr_scheduler.step()
+        # TODO Activate learning rate scheduler!
+        # self.lr_scheduler.step()
         batch_loss = losses_sum / n_batches
         
         return batch_loss

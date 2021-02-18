@@ -22,7 +22,7 @@ class TrackerConfig:
     
     # Dataset parameters.
     # Number of pairs per each tracking sequence.
-    pairs_per_seq: int = 10
+    pairs_per_seq: int = 5
     # Exemplar (initial template) image side size.
     exemplar_size: int = 127
     # Search (future) image side size.
