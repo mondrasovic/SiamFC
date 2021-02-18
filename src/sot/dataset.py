@@ -207,17 +207,8 @@ class SiamesePairwiseDataset(Dataset):
         
         self.indices: np.ndarray = np.random.permutation(len(self.data_seq))
         
-        img_transforms = transforms.Compose([
-            transforms.ColorJitter(
-                brightness=0.1, contrast=0.05, saturation=0.05, hue=0.05),
-            transforms.RandomHorizontalFlip(0.3),
-            transforms.RandomGrayscale(0.2),
-            transforms.ToTensor()])
-        # TODO Remove this.
-        img_transforms = transforms.Compose([transforms.ToTensor()])
-        
-        self.transform_exemplar = img_transforms
-        self.transform_instance = img_transforms
+        self.transform_exemplar = self._build_transforms(self.cfg.exemplar_size)
+        self.transform_instance = self._build_transforms(self.cfg.instance_size)
     
     def __getitem__(self, index: int) -> PairItemT:
         index = self.indices[index % len(self.data_seq)]
@@ -227,7 +218,6 @@ class SiamesePairwiseDataset(Dataset):
         valid_indices = annos[:, 2:].prod(axis=1) >= self.cfg.min_bbox_area
         valid_img_files = np.asarray(img_files)[valid_indices]
         valid_annos = annos[valid_indices, :]
-        assert len(valid_img_files) == len(valid_annos)
         
         n_imgs = len(valid_img_files)
         exemplar_idx, instance_idx = self.sample_pair_indices(n_imgs)
@@ -238,7 +228,6 @@ class SiamesePairwiseDataset(Dataset):
         instance_anno = valid_annos[instance_idx]
         
         size_ratio = self.cfg.exemplar_size / self.cfg.instance_size
-        assert self.cfg.exemplar_size < self.cfg.instance_size
         exemplar_img = self.read_image_and_transform(
             exemplar_img_path, exemplar_anno, self.cfg.exemplar_size,
             self.transform_exemplar, size_ratio)
@@ -277,6 +266,14 @@ class SiamesePairwiseDataset(Dataset):
         patch_tensor = transform(patch)
         
         return patch_tensor
+    
+    @staticmethod
+    def _build_transforms(
+            output_size: int, max_translate: int = 4):
+        return transforms.Compose([
+            transforms.RandomCrop(
+                output_size, padding=max_translate, padding_mode='edge'),
+            transforms.ToTensor()])
 
 
 def build_dataset_and_init(cls, *args, **kwargs):
@@ -292,7 +289,7 @@ if __name__ == '__main__':
     dataset = GOT10k(root_dir="../../../../datasets/GOT10k", subset='val')
     pairwise_dataset = SiamesePairwiseDataset(
         cast(Sequence, dataset), TrackerConfig())
-    count = 20
+    count = 10
     
     for i in range(count):
         exemplar_img, instance_img = pairwise_dataset[i]
