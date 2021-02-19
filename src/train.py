@@ -12,7 +12,7 @@ import click
 import numpy as np
 import torch
 import tqdm
-from got10k.datasets import GOT10k, OTB
+from got10k.datasets import GOT10k, OTB, VOT
 from torch import optim
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
@@ -51,7 +51,7 @@ class SiamFCTrainer:
         weight_mat = torch.from_numpy(weight_mat).float().to(self.device)
         
         self.criterion = WeightedBCELoss(weight_mat).to(self.device)
-        
+
         self.optimizer = optim.SGD(
             self.tracker.model.parameters(), lr=self.cfg.initial_lr,
             weight_decay=self.cfg.weight_decay, momentum=self.cfg.momentum)
@@ -111,10 +111,10 @@ class SiamFCTrainer:
                 exemplar = exemplar.to(self.device)
                 instance = instance.to(self.device)
                 
-                self.optimizer.zero_grad()
                 pred_response_maps = self.tracker.model(exemplar, instance)
-                
                 loss = self.criterion(pred_response_maps, self.mask_mat)
+                
+                self.optimizer.zero_grad()
                 loss.backward()
                 self.optimizer.step()
                 
@@ -126,8 +126,7 @@ class SiamFCTrainer:
                 pbar.set_description(f"{epoch_text} | {loss_text}")
                 pbar.update()
         
-        # TODO Activate learning rate scheduler!
-        # self.lr_scheduler.step()
+        self.lr_scheduler.step()
         batch_loss = losses_sum / n_batches
         
         return batch_loss
@@ -139,6 +138,8 @@ class SiamFCTrainer:
             data_seq = OTB(root_dir=self.dataset_dir_path, version=2013)
         elif self.dataset_type == DatasetType.OTB15:
             data_seq = OTB(root_dir=self.dataset_dir_path, version=2015)
+        elif self.dataset_type == DatasetType.VOT15:
+            data_seq = VOT(root_dir=self.dataset_dir_path, version=2015)
         else:
             raise ValueError(f"unsupported dataset type: {self.dataset_type}")
         
@@ -205,7 +206,7 @@ def main(
     Starts a SiamFC training with the specific DATASET_NAME
     (GOT10k | OTB13 | OTB15 | VOT15) located in the DATASET_DIR_PATH.
     """
-    np.random.seed(731995)
+    # np.random.seed(731995)
     
     dataset_type = DatasetType.decode_dataset_type(dataset_name)
     cfg = TrackerConfig()

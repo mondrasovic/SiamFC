@@ -11,18 +11,18 @@ class TrackerConfig:
     # Training parameters.
     n_epochs: int = 50
     batch_size: int = 8
-    n_workers: int = 6
+    n_workers: int = 8
     free_cpus: int = 0
     
     # Optimizer parameters.
-    weight_decay: float = 5.e-4
+    weight_decay: float = 5e-4
     momentum: float = 0.9
-    initial_lr: float = 1.e-2
-    ultimate_lr: float = 1.e-5
+    initial_lr: float = 1e-2
+    ultimate_lr: float = 1e-5
     
     # Dataset parameters.
     # Number of pairs per each tracking sequence.
-    pairs_per_seq: int = 5
+    pairs_per_seq: int = 1
     # Exemplar (initial template) image side size.
     exemplar_size: int = 127
     # Search (future) image side size.

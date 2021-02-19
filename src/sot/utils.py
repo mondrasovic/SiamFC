@@ -91,6 +91,7 @@ def create_ground_truth_mask_and_weight(
 def cv_show_tensor_as_img(img: torch.Tensor, win_name: str) -> None:
     img = img.cpu().detach().squeeze(0).numpy()
     img = np.transpose(img, axes=(1, 2, 0))
+    img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR).astype(np.uint8)
     cv.imshow(win_name, img)
 
 
