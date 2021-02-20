@@ -10,6 +10,8 @@ import dataclasses
 class TrackerConfig:
     # Training parameters.
     n_epochs: int = 50
+    n_epochs_eval: int = 1
+    validation_split = 0.1
     batch_size: int = 8
     n_workers: int = 8
     free_cpus: int = 0
@@ -22,7 +24,7 @@ class TrackerConfig:
     
     # Dataset parameters.
     # Number of pairs per each tracking sequence.
-    pairs_per_seq: int = 1
+    pairs_per_seq: int = 4
     # Exemplar (initial template) image side size.
     exemplar_size: int = 127
     # Search (future) image side size.

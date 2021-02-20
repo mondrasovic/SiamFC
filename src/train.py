@@ -6,7 +6,7 @@
 import multiprocessing
 import os
 import sys
-from typing import cast, Optional, Sequence
+from typing import cast, Optional, Sequence, Tuple
 
 import click
 import numpy as np
@@ -14,7 +14,7 @@ import torch
 import tqdm
 from got10k.datasets import GOT10k, OTB, VOT
 from torch import optim
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, random_split
 from torch.utils.tensorboard import SummaryWriter
 
 from common import DatasetType
@@ -56,7 +56,7 @@ class SiamFCTrainer:
             self.tracker.model.parameters(), lr=self.cfg.initial_lr,
             weight_decay=self.cfg.weight_decay, momentum=self.cfg.momentum)
         
-        self.lr_scheduler = self.create_exponential_lr_scheduler(
+        self.lr_scheduler = self._create_exponential_lr_scheduler(
             self.optimizer, self.cfg.initial_lr, self.cfg.ultimate_lr,
             self.cfg.n_epochs)
         
@@ -68,70 +68,104 @@ class SiamFCTrainer:
         else:
             writer = SummaryWriter(self.log_dir_path)
         
-        pairwise_dataset = self.init_pairwise_dataset()
         n_workers = max(
             1, min(self.cfg.n_workers,
                    multiprocessing.cpu_count() - self.cfg.free_cpus))
         pin_memory = torch.cuda.is_available()
-        
-        train_loader = DataLoader(
-            pairwise_dataset, batch_size=self.cfg.batch_size, shuffle=True,
-            num_workers=n_workers, pin_memory=pin_memory, drop_last=True)
+        train_loader, eval_loader = self._init_data_loaders(
+            n_workers, pin_memory)
         
         if checkpoint_file_path is None:
             self.epoch = 1
         else:
             self._load_checkpoint(checkpoint_file_path)
         
-        self.tracker.model.train()
-        
         while self.epoch <= self.cfg.n_epochs:
-            loss = self._run_epoch(train_loader)
+            train_loss = self._run_epoch(train_loader)
             
             if writer is not None:
-                writer.add_scalar('Loss/train', loss, self.epoch)
+                writer.add_scalar('Loss/train', train_loss, self.epoch)
             
             if self.checkpoint_dir_path is not None:
                 self._save_checkpoint(
-                    loss, self.build_checkpoint_file_path_and_init())
+                    train_loss, self._build_checkpoint_file_path_and_init())
             
+            if self.cfg.n_epochs_eval > 0:
+                if (self.epoch % self.cfg.n_epochs_eval) == 0:
+                    eval_loss = self._run_epoch(eval_loader, backward=False)
+
+                    if writer is not None:
+                        writer.add_scalar('Loss/eval', eval_loss, self.epoch)
+
+            self.lr_scheduler.step()
             self.epoch += 1
+            print("-" * 80)
         
         if writer is not None:
             writer.close()
     
-    def _run_epoch(self, train_loader: DataLoader) -> float:
+    def _run_epoch(
+            self, data_loader: DataLoader, *, backward: bool = True) -> float:
+        self.tracker.model.train(backward)
+        
         losses_sum = 0.0
-        n_batches = len(train_loader)
+        n_batches = len(data_loader)
         
-        epoch_text = f"epoch: {self.epoch}/{self.cfg.n_epochs}"
+        mode_text = "train" if backward else "eval"
+        epoch_text = f"[{mode_text:5s}] epoch: " \
+                     f"{self.epoch:3d}/{self.cfg.n_epochs}"
         
-        with tqdm.tqdm(total=n_batches, file=sys.stdout) as pbar:
-            for batch, (exemplar, instance) in enumerate(train_loader, start=1):
+        tqdm_pbar = tqdm.tqdm(total=n_batches, file=sys.stdout)
+        with torch.set_grad_enabled(backward), tqdm_pbar as pbar:
+            for batch, (exemplar, instance) in enumerate(data_loader, start=1):
                 exemplar = exemplar.to(self.device)
                 instance = instance.to(self.device)
                 
                 pred_response_maps = self.tracker.model(exemplar, instance)
                 loss = self.criterion(pred_response_maps, self.mask_mat)
                 
-                self.optimizer.zero_grad()
-                loss.backward()
-                self.optimizer.step()
+                if backward:
+                    self.optimizer.zero_grad()
+                    loss.backward()
+                    self.optimizer.step()
                 
                 curr_loss = loss.item()
                 losses_sum += curr_loss
                 curr_batch_loss = losses_sum / batch
                 
-                loss_text = f"loss: {curr_loss:.5f} [{curr_batch_loss:.5f}]"
+                loss_text = f"loss: {curr_loss:.5f} ({curr_batch_loss:.5f})"
                 pbar.set_description(f"{epoch_text} | {loss_text}")
                 pbar.update()
         
-        self.lr_scheduler.step()
         batch_loss = losses_sum / n_batches
         
         return batch_loss
     
-    def init_pairwise_dataset(self) -> SiamesePairwiseDataset:
+    def _init_data_loaders(
+            self, n_workers: int,
+            pin_memory: bool) -> Tuple[DataLoader, DataLoader]:
+        pairwise_dataset = self._init_pairwise_dataset()
+        
+        n_total_samples = len(pairwise_dataset)
+        n_eval_samples = int(round(
+            n_total_samples * self.cfg.validation_split))
+        n_train_samples = n_total_samples - n_eval_samples
+        
+        train_dataset, eval_dataset = random_split(
+            pairwise_dataset, (n_train_samples, n_eval_samples),
+            generator=torch.Generator())
+        
+        def create_dataloader(dataset):
+            return DataLoader(
+                dataset, batch_size=self.cfg.batch_size, shuffle=True,
+                num_workers=n_workers, pin_memory=pin_memory, drop_last=True)
+        
+        train_loader = create_dataloader(train_dataset)
+        eval_loader = create_dataloader(eval_dataset)
+        
+        return train_loader, eval_loader
+    
+    def _init_pairwise_dataset(self) -> SiamesePairwiseDataset:
         if self.dataset_type == DatasetType.GOT10K:
             data_seq = GOT10k(root_dir=self.dataset_dir_path, subset='train')
         elif self.dataset_type == DatasetType.OTB13:
@@ -149,7 +183,7 @@ class SiamFCTrainer:
         return pairwise_dataset
     
     @staticmethod
-    def create_exponential_lr_scheduler(
+    def _create_exponential_lr_scheduler(
             optimizer, initial_lr: float, ultimate_lr: float,
             n_epochs: int) -> optim.lr_scheduler.ExponentialLR:
         assert n_epochs > 0
@@ -164,7 +198,7 @@ class SiamFCTrainer:
         
         return lr_scheduler
     
-    def build_checkpoint_file_path_and_init(self) -> str:
+    def _build_checkpoint_file_path_and_init(self) -> str:
         os.makedirs(self.checkpoint_dir_path, exist_ok=True)
         file_name = f"checkpoint_{self.epoch:03d}.pth"
         return os.path.join(self.checkpoint_dir_path, file_name)
