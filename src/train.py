@@ -72,7 +72,7 @@ class SiamFCTrainer:
             1, min(self.cfg.n_workers,
                    multiprocessing.cpu_count() - self.cfg.free_cpus))
         pin_memory = torch.cuda.is_available()
-        train_loader, eval_loader = self._init_data_loaders(
+        train_loader, val_loader = self._init_data_loaders(
             n_workers, pin_memory)
         
         if checkpoint_file_path is None:
@@ -92,7 +92,7 @@ class SiamFCTrainer:
             
             if self.cfg.n_epochs_eval > 0:
                 if (self.epoch % self.cfg.n_epochs_eval) == 0:
-                    eval_loss = self._run_epoch(eval_loader, backward=False)
+                    eval_loss = self._run_epoch(val_loader, backward=False)
 
                     if writer is not None:
                         writer.add_scalar('Loss/eval', eval_loss, self.epoch)
@@ -111,9 +111,8 @@ class SiamFCTrainer:
         losses_sum = 0.0
         n_batches = len(data_loader)
         
-        mode_text = "train" if backward else "eval"
-        epoch_text = f"[{mode_text:5s}] epoch: " \
-                     f"{self.epoch:3d}/{self.cfg.n_epochs}"
+        mode_text = "train" if backward else "valid"
+        epoch_text = f"[{mode_text}] epoch: {self.epoch:3d}/{self.cfg.n_epochs}"
         
         tqdm_pbar = tqdm.tqdm(total=n_batches, file=sys.stdout)
         with torch.set_grad_enabled(backward), tqdm_pbar as pbar:
@@ -147,12 +146,12 @@ class SiamFCTrainer:
         pairwise_dataset = self._init_pairwise_dataset()
         
         n_total_samples = len(pairwise_dataset)
-        n_eval_samples = int(round(
+        n_valid_samples = int(round(
             n_total_samples * self.cfg.validation_split))
-        n_train_samples = n_total_samples - n_eval_samples
+        n_train_samples = n_total_samples - n_valid_samples
         
-        train_dataset, eval_dataset = random_split(
-            pairwise_dataset, (n_train_samples, n_eval_samples),
+        train_dataset, val_dataset = random_split(
+            pairwise_dataset, (n_train_samples, n_valid_samples),
             generator=torch.Generator())
         
         def create_dataloader(dataset):
@@ -161,9 +160,9 @@ class SiamFCTrainer:
                 num_workers=n_workers, pin_memory=pin_memory, drop_last=True)
         
         train_loader = create_dataloader(train_dataset)
-        eval_loader = create_dataloader(eval_dataset)
+        val_loader = create_dataloader(val_dataset)
         
-        return train_loader, eval_loader
+        return train_loader, val_loader
     
     def _init_pairwise_dataset(self) -> SiamesePairwiseDataset:
         if self.dataset_type == DatasetType.GOT10K:
