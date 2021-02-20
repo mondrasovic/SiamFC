@@ -19,7 +19,7 @@ import numpy as np
 import torch
 from PIL import Image
 from torch.utils.data import Dataset
-from torchvision import transforms
+from torchvision import transforms as T
 
 from sot.bbox import BBox
 from sot.cfg import TrackerConfig
@@ -270,10 +270,10 @@ class SiamesePairwiseDataset(Dataset):
     @staticmethod
     def _build_transforms(
             output_size: int, max_translate: int = 4):
-        return transforms.Compose([
-            transforms.RandomCrop(
+        return T.Compose([
+            T.RandomCrop(
                 output_size, padding=max_translate, padding_mode='edge'),
-            transforms.ToTensor()])
+            T.ToTensor()])
 
 
 def build_dataset_and_init(cls, *args, **kwargs):
