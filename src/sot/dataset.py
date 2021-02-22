@@ -23,7 +23,35 @@ from torchvision import transforms as T
 
 from sot.bbox import BBox
 from sot.cfg import TrackerConfig
-from sot.utils import calc_bbox_side_size_with_context, center_crop_and_resize
+from sot.utils import (
+    calc_bbox_side_size_with_context, center_crop_and_resize, rand_uniform,
+    ImageT
+)
+
+
+class RandomRescale:
+    INTERPOLATIONS = (
+        Image.NEAREST, Image.BILINEAR, Image.BICUBIC, Image.LANCZOS, Image.BOX,
+        Image.HAMMING)
+    
+    def __init__(self, stretch_coef: float) -> None:
+        self.stretch_coef: float = stretch_coef
+    
+    def __call__(self, image: ImageT) -> ImageT:
+        width, height = image.size
+        
+        width_stretch = rand_uniform(-self.stretch_coef, self.stretch_coef)
+        height_stretch = rand_uniform(-self.stretch_coef, self.stretch_coef)
+        
+        new_width = int(round((1 + width_stretch) * width))
+        new_height = int(round((1 + height_stretch) * height))
+        
+        new_size = (new_width, new_height)
+        interpolation = np.random.choice(self.INTERPOLATIONS)
+        
+        resized_image = image.resize(new_size, interpolation)
+        
+        return resized_image
 
 
 @dataclasses.dataclass(frozen=True)
@@ -269,10 +297,13 @@ class SiamesePairwiseDataset(Dataset):
     
     @staticmethod
     def _build_transforms(
-            output_size: int, max_translate: int = 8):
+            output_size: int, *, max_translate: int = 4,
+            max_stretch: float = 0.1):
         return T.Compose([
+            RandomRescale(max_stretch),
             T.RandomCrop(
-                output_size, padding=max_translate, padding_mode='edge'),
+                output_size, padding=max_translate, pad_if_needed=True,
+                padding_mode='edge'),
             T.ToTensor()])
 
 

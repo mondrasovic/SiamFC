@@ -4,7 +4,7 @@
 # Author: Milan Ondrasovic <milan.ondrasovic@gmail.com>
 
 import numbers
-from typing import Optional, Tuple, Union
+from typing import Optional, Tuple, Union, Any
 
 import cv2 as cv
 import numpy as np
@@ -18,6 +18,7 @@ from sot.bbox import BBox
 SizeT = Union[np.ndarray, Tuple[int, int]]
 ImageT = Image.Image
 ColorT = Tuple[int, int, int]
+
 
 
 def calc_bbox_side_size_with_context(bbox: BBox) -> float:
@@ -123,3 +124,18 @@ def assure_int_bbox(bbox: np.ndarray) -> np.ndarray:
         return bbox
     else:
         return bbox.round().astype(np.int)
+
+
+def rand_uniform(
+        a: float, b: float,
+        size: Optional[Any] = None) -> Union[float, np.ndarray]:
+    """
+    Generates a uniformly distributed number in the [a, b) interval.
+
+    :param a: interval lower bound (inclusive)
+    :param b: interval upper bound (exclusive)
+    :param size: shape of the array to be returned
+    :return: an array of a specified shape containing generated values from the
+    [a, b) interval
+    """
+    return (np.random.random(size) * (b - a)) + a
