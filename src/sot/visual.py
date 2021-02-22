@@ -14,7 +14,20 @@ from sot.utils import SizeT
 ColorT = Tuple[int, int, int]
 
 
-def render_response_map(
+def _render_bbox(
+        image: np.ndarray, bbox: np.ndarray, *, alpha: float = 0.75,
+        color: ColorT = (201, 216, 53)) -> None:
+    x1, y1 = tuple(bbox[:2])
+    x2, y2 = tuple(bbox[:2] + bbox[2:])
+
+    roi = image[y1:y2, x1:x2]
+    rect = np.ones_like(roi) * 255
+    
+    image[y1:y2, x1:x2] = cv.addWeighted(roi, alpha, rect, 1 - alpha, 0)
+    cv.rectangle(image, (x1, y1), (x2, y2), color, 3, cv.LINE_AA)
+
+
+def _render_response_map(
         response: np.ndarray, size: Optional[SizeT] = None) -> np.ndarray:
     response = ((response / response.max()) * 255).round().astype(np.uint8)
     if size is not None:
@@ -23,7 +36,7 @@ def render_response_map(
     return response
 
 
-def concat_imgs(
+def _concat_imgs(
         imgs, *, row: bool = True,
         border_value: ColorT = (0, 0, 0)) -> np.ndarray:
     if row:
@@ -66,15 +79,13 @@ class SiameseTrackingVisualizer:
     def show_curr_state(
             self, curr_frame: np.ndarray, instance_img: np.ndarray,
             response_map: np.ndarray, bbox_pred: np.ndarray) -> bool:
-        pt1 = tuple(bbox_pred[:2])
-        pt2 = tuple(bbox_pred[:2] + bbox_pred[2:])
-        cv.rectangle(curr_frame, pt1, pt2, (0, 255, 0), 3, cv.LINE_AA)
+        _render_bbox(curr_frame, bbox_pred)
         
-        response_map = render_response_map(response_map)
-        row = concat_imgs(
+        response_map = _render_response_map(response_map)
+        row = _concat_imgs(
             (self.exemplar_img, instance_img, response_map), row=True,
             border_value=self.border_value)
-        preview_img = concat_imgs(
+        preview_img = _concat_imgs(
             (curr_frame, row), row=False, border_value=self.border_value)
         cv.imshow(self.win_name, preview_img)
         key = cv.waitKey(self.wait_key) & 0xff
