@@ -5,7 +5,7 @@
 
 import sys
 import pathlib
-from typing import Iterable, Optional
+from typing import Iterable, Optional, cast
 
 import click
 import cv2 as cv
@@ -14,7 +14,8 @@ import torch
 
 from sot.cfg import TrackerConfig
 from sot.tracker import TrackerSiamFC
-from sot.utils import cv_to_pil_img
+from sot.utils import cv_to_pil_img, ImageT, pil_to_cv_img
+from sot.visual import SiameseTrackingVisualizer
 
 
 def iter_video_capture() -> Iterable[np.ndarray]:
@@ -41,29 +42,50 @@ def main(imgs_dir_path: Optional[str], model_file_path: Optional[str]) -> int:
     cfg = TrackerConfig()
     tracker = TrackerSiamFC(cfg, device, model_file_path)
     
-    is_first = True
+    curr_exemplar_img = None
+    curr_instance_img = None
+    curr_response_map = None
     
+    def retrieve_exemplar_img(exemplar_img: ImageT) -> None:
+        nonlocal curr_exemplar_img
+        curr_exemplar_img = pil_to_cv_img(exemplar_img)
+    
+    def retrieve_instance_img(instance_img: ImageT) -> None:
+        nonlocal curr_instance_img
+        curr_instance_img = pil_to_cv_img(instance_img)
+    
+    def retrieve_response_map(response_map: np.ndarray) -> None:
+        nonlocal curr_response_map
+        curr_response_map = response_map
+    
+    tracker.on_exemplar_img_extract = retrieve_exemplar_img
+    tracker.on_instance_img_extract = retrieve_instance_img
+    tracker.on_response_map_calc = retrieve_response_map
+
     if imgs_dir_path is None:
         imgs_iter = iter_video_capture()
     else:
         imgs_iter = iter_dir_imgs(imgs_dir_path)
+    is_first = True
+    
+    visualizer = None
     
     for frame in imgs_iter:
         if is_first:
             # bbox = np.asarray(cv.selectROI("tracker initialization", frame))
             bbox = np.asarray((198, 214, 34, 81))
             tracker.init(cv_to_pil_img(frame), bbox)
+            visualizer = SiameseTrackingVisualizer(
+                cast(np.ndarray, curr_exemplar_img))
             is_first = False
         else:
             bbox_pred = tracker.update(cv_to_pil_img(frame))
-            pt1 = tuple(bbox_pred[:2])
-            pt2 = tuple(bbox_pred[:2] + bbox_pred[2:])
-            cv.rectangle(frame, pt1, pt2, (0, 255, 0), 3, cv.LINE_AA)
-        
-        cv.imshow("tracking preview", frame)
-        key = cv.waitKey(0) & 0xff
-        if key == ord('q'):
-            break
+            if not visualizer.show_curr_state(
+                frame, cast(np.ndarray, curr_instance_img),
+                cast(np.ndarray, curr_response_map), bbox_pred):
+                break
+    
+    visualizer.close()
     
     return 0
 

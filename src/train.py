@@ -96,7 +96,8 @@ class SiamFCTrainer:
                         eval_loss = self._run_epoch(val_loader, backward=False)
     
                         if writer is not None:
-                            writer.add_scalar('Loss/eval', eval_loss, self.epoch)
+                            writer.add_scalar(
+                                'Loss/eval', eval_loss, self.epoch)
     
                 self.lr_scheduler.step()
                 self.epoch += 1

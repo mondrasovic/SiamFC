@@ -3,7 +3,7 @@
 
 # Author: Milan Ondrasovic <milan.ondrasovic@gmail.com>
 
-from typing import Iterable, Optional, Union
+from typing import Iterable, Optional, Union, Callable, cast
 
 import cv2 as cv
 import numpy as np
@@ -17,6 +17,9 @@ from sot.utils import (
     assure_int_bbox, calc_bbox_side_size_with_context, center_crop_and_resize,
     ImageT, pil_to_tensor,
 )
+
+
+TrackImgCb = Optional[Callable[[Union[np.ndarray, ImageT]], None]]
 
 
 class TrackerSiamFC(Tracker):
@@ -51,6 +54,10 @@ class TrackerSiamFC(Tracker):
         
         self.target_bbox = None
         self.exemplar_emb = None
+        
+        self.on_exemplar_img_extract: TrackImgCb = None
+        self.on_instance_img_extract: TrackImgCb = None
+        self.on_response_map_calc: TrackImgCb = None
     
     @torch.no_grad()
     def init(self, img: ImageT, bbox: np.ndarray) -> None:
@@ -71,6 +78,9 @@ class TrackerSiamFC(Tracker):
             img, exemplar_bbox,
             (self.cfg.exemplar_size, self.cfg.exemplar_size))
         
+        if self.on_exemplar_img_extract:
+            self.on_exemplar_img_extract(exemplar_img)
+        
         exemplar_img_tensor = torch.unsqueeze(pil_to_tensor(exemplar_img), 0)
         exemplar_img_tensor = exemplar_img_tensor.to(self.device)
         self.exemplar_emb = self.model.extract_visual_features(
@@ -83,9 +93,9 @@ class TrackerSiamFC(Tracker):
         # Search for the object over multiple different scales
         # (smaller and bigger).
         instance_size = (self.cfg.instance_size, self.cfg.instance_size)
-        instances_imgs = (
+        instances_imgs = [
             center_crop_and_resize(img, bbox, instance_size)
-            for bbox in self.iter_target_centered_scaled_instance_bboxes())
+            for bbox in self.iter_target_centered_scaled_instance_bboxes()]
         
         instances_imgs_tensor = torch.stack(
             [pil_to_tensor(img) for img in instances_imgs])
@@ -119,6 +129,13 @@ class TrackerSiamFC(Tracker):
         
         response = (1 - self.cfg.cosine_win_influence) * response + \
                    self.cfg.cosine_win_influence * self.cosine_win
+        
+        if self.on_instance_img_extract:
+            self.on_instance_img_extract(
+                instances_imgs[cast(int, peak_scale_pos)])
+        
+        if self.on_response_map_calc:
+            self.on_response_map_calc(response)
         
         # The assumption is that the peak response value is in the center of the
         # response map. Thus, we compute the change with respect to the center

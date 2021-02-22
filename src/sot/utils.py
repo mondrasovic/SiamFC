@@ -15,8 +15,9 @@ from torchvision import transforms
 from sot.bbox import BBox
 
 
-Size = Union[np.ndarray, Tuple[int, int]]
+SizeT = Union[np.ndarray, Tuple[int, int]]
 ImageT = Image.Image
+ColorT = Tuple[int, int, int]
 
 
 def calc_bbox_side_size_with_context(bbox: BBox) -> float:
@@ -36,7 +37,7 @@ def calc_bbox_side_size_with_context(bbox: BBox) -> float:
 
 
 def center_crop_and_resize(
-        img: ImageT, bbox: BBox, target_size: Size,
+        img: ImageT, bbox: BBox, target_size: SizeT,
         border: Optional[Union[int, Tuple[int, ...]]] = None,
         interpolation=Image.BICUBIC) -> ImageT:
     bbox_corners = bbox.as_corners()
@@ -58,7 +59,7 @@ def center_crop_and_resize(
 
 
 def create_ground_truth_mask_and_weight(
-        size: Size, radius: float, total_stride: int,
+        size: SizeT, radius: float, total_stride: int,
         batch_size: int) -> Tuple[np.ndarray, np.ndarray]:
     width, height = size
     
@@ -72,8 +73,8 @@ def create_ground_truth_mask_and_weight(
     mask_mat = mask_mat[None, None, ...]  # Add channel and batch dimension.
     mask_mat = np.repeat(mask_mat, batch_size, axis=0)
     
-    positives_mask = mask_mat == 1
-    negatives_mask = mask_mat == 0
+    positives_mask = (mask_mat == 1)
+    negatives_mask = (mask_mat == 0)
     n_positives = positives_mask.sum()
     n_negatives = negatives_mask.sum()
     
@@ -91,7 +92,7 @@ def create_ground_truth_mask_and_weight(
 def cv_show_tensor_as_img(img: torch.Tensor, win_name: str) -> None:
     img = img.cpu().detach().squeeze(0).numpy()
     img = np.transpose(img, axes=(1, 2, 0))
-    img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR).astype(np.uint8)
+    img = cv.cvtColor(img, cv.COLOR_RGB2BGR).astype(np.uint8)
     cv.imshow(win_name, img)
 
 
@@ -99,19 +100,6 @@ def cv_wait_key_and_destroy_all(delay: int = 0, quit_key: str = 'q') -> bool:
     key = cv.waitKey(delay) & 0xff
     cv.destroyAllWindows()
     return key == ord(quit_key)
-
-
-def show_response_maps(
-        responses: np.ndarray, size: Size = (408, 408),
-        wait_key: int = 0) -> None:
-    for i, response in enumerate(responses, start=1):
-        response = ((response / response.max()) * 255).round().astype(np.uint8)
-        response = cv.resize(response, size, interpolation=cv.INTER_CUBIC)
-        response = cv.applyColorMap(response, cv.COLORMAP_JET)
-        cv.imshow(f"{i:04d} response map", response)
-    
-    cv.waitKey(wait_key)
-    cv.destroyAllWindows()
 
 
 def cv_to_pil_img(img: np.ndarray) -> Image:
