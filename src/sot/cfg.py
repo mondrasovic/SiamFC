@@ -13,7 +13,7 @@ class TrackerConfig:
     n_epochs_eval: int = 0
     validation_split = 0.1
     batch_size: int = 16
-    n_workers: int = 8
+    n_workers: int = 4
     free_cpus: int = 0
     
     # Optimizer parameters.
