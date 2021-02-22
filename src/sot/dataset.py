@@ -269,7 +269,7 @@ class SiamesePairwiseDataset(Dataset):
     
     @staticmethod
     def _build_transforms(
-            output_size: int, max_translate: int = 4):
+            output_size: int, max_translate: int = 8):
         return T.Compose([
             T.RandomCrop(
                 output_size, padding=max_translate, padding_mode='edge'),

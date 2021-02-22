@@ -9,10 +9,10 @@ import dataclasses
 @dataclasses.dataclass(frozen=True)
 class TrackerConfig:
     # Training parameters.
-    n_epochs: int = 50
-    n_epochs_eval: int = 2
+    n_epochs: int = 80
+    n_epochs_eval: int = 0
     validation_split = 0.1
-    batch_size: int = 8
+    batch_size: int = 16
     n_workers: int = 8
     free_cpus: int = 0
     
@@ -24,7 +24,7 @@ class TrackerConfig:
     
     # Dataset parameters.
     # Number of pairs per each tracking sequence.
-    pairs_per_seq: int = 10
+    pairs_per_seq: int = 20
     # Exemplar (initial template) image side size.
     exemplar_size: int = 127
     # Search (future) image side size.
@@ -34,7 +34,7 @@ class TrackerConfig:
     max_pair_dist: int = 100
     
     # Minimum area of the bounding box to consider during training.
-    min_bbox_area: int = 20
+    min_bbox_area: int = 10
     
     # Inference parameters.
     response_size: int = 17  # Dimension of the output response (score) map.
