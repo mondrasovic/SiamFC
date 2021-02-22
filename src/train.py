@@ -80,29 +80,32 @@ class SiamFCTrainer:
         else:
             self._load_checkpoint(checkpoint_file_path)
         
-        while self.epoch <= self.cfg.n_epochs:
-            train_loss = self._run_epoch(train_loader)
-            
+        try:
+            while self.epoch <= self.cfg.n_epochs:
+                train_loss = self._run_epoch(train_loader)
+                
+                if writer is not None:
+                    writer.add_scalar('Loss/train', train_loss, self.epoch)
+                
+                if self.checkpoint_dir_path is not None:
+                    self._save_checkpoint(
+                        train_loss, self._build_checkpoint_file_path_and_init())
+                
+                if self.cfg.n_epochs_eval > 0:
+                    if (self.epoch % self.cfg.n_epochs_eval) == 0:
+                        eval_loss = self._run_epoch(val_loader, backward=False)
+    
+                        if writer is not None:
+                            writer.add_scalar('Loss/eval', eval_loss, self.epoch)
+    
+                self.lr_scheduler.step()
+                self.epoch += 1
+                print("-" * 80)
+        except KeyboardInterrupt:
+            print("interrupting...")
+        finally:
             if writer is not None:
-                writer.add_scalar('Loss/train', train_loss, self.epoch)
-            
-            if self.checkpoint_dir_path is not None:
-                self._save_checkpoint(
-                    train_loss, self._build_checkpoint_file_path_and_init())
-            
-            if self.cfg.n_epochs_eval > 0:
-                if (self.epoch % self.cfg.n_epochs_eval) == 0:
-                    eval_loss = self._run_epoch(val_loader, backward=False)
-
-                    if writer is not None:
-                        writer.add_scalar('Loss/eval', eval_loss, self.epoch)
-
-            self.lr_scheduler.step()
-            self.epoch += 1
-            print("-" * 80)
-        
-        if writer is not None:
-            writer.close()
+                writer.close()
     
     def _run_epoch(
             self, data_loader: DataLoader, *, backward: bool = True) -> float:
