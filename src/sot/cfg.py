@@ -33,7 +33,7 @@ class TrackerConfig:
     # No. of frames between exemplar and instance.
     max_pair_dist: int = 100
     
-    # Minimum area of the bounding box to consider during training.
+    # Minimum area of the bounding box.
     min_bbox_area: int = 10
     
     # Inference parameters.

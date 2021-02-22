@@ -29,7 +29,7 @@ from sot.utils import (
 )
 
 
-class RandomRescale:
+class RandomStretch:
     INTERPOLATIONS = (
         Image.NEAREST, Image.BILINEAR, Image.BICUBIC, Image.LANCZOS, Image.BOX,
         Image.HAMMING)
@@ -243,12 +243,12 @@ class SiamesePairwiseDataset(Dataset):
         img_files, annos = self.data_seq[index]
         annos = annos.astype(np.int)
         
-        valid_indices = annos[:, 2:].prod(axis=1) >= self.cfg.min_bbox_area
+        valid_indices = self._filter_valid_indices(annos)
         valid_img_files = np.asarray(img_files)[valid_indices]
         valid_annos = annos[valid_indices, :]
         
         n_imgs = len(valid_img_files)
-        exemplar_idx, instance_idx = self.sample_pair_indices(n_imgs)
+        exemplar_idx, instance_idx = self._sample_pair_indices(n_imgs)
         
         exemplar_img_path = valid_img_files[exemplar_idx]
         exemplar_anno = valid_annos[exemplar_idx]
@@ -256,10 +256,10 @@ class SiamesePairwiseDataset(Dataset):
         instance_anno = valid_annos[instance_idx]
         
         size_ratio = self.cfg.exemplar_size / self.cfg.instance_size
-        exemplar_img = self.read_image_and_transform(
+        exemplar_img = self._read_image_and_transform(
             exemplar_img_path, exemplar_anno, self.cfg.exemplar_size,
             self.transform_exemplar, size_ratio)
-        instance_img = self.read_image_and_transform(
+        instance_img = self._read_image_and_transform(
             instance_img_path, instance_anno, self.cfg.instance_size,
             self.transform_instance)
         
@@ -268,14 +268,24 @@ class SiamesePairwiseDataset(Dataset):
     def __len__(self) -> int:
         return len(self.data_seq) * self.cfg.pairs_per_seq
     
-    def sample_pair_indices(self, n_items: int) -> Tuple[int, int]:
+    def _sample_pair_indices(self, n_items: int) -> Tuple[int, int]:
         max_distance = min(n_items - 1, self.cfg.max_pair_dist)
         rand_indices = np.random.choice(max_distance + 1, 2)
         rand_start = np.random.randint(n_items - max_distance)
-        return rand_indices + rand_start
+        rand_indices = rand_indices + rand_start
+        
+        if rand_indices[1] < rand_indices[0]:
+            rand_indices[0], rand_indices[1] = rand_indices[1], rand_indices[0]
+        
+        return rand_indices
+    
+    def _filter_valid_indices(self, annos: np.ndarray) -> np.ndarray:
+        side_lengths = annos[:, 2:]
+        valid_indices = side_lengths.prod(axis=1) >= self.cfg.min_bbox_area
+        return valid_indices
     
     @staticmethod
-    def read_image_and_transform(
+    def _read_image_and_transform(
             img_path: str, anno: np.ndarray, output_side_size: int,
             transform: Callable[[Image.Image], torch.Tensor],
             size_with_context_scale: float = 1.0) -> torch.Tensor:
@@ -300,7 +310,7 @@ class SiamesePairwiseDataset(Dataset):
             output_size: int, *, max_translate: int = 4,
             max_stretch: float = 0.1):
         return T.Compose([
-            RandomRescale(max_stretch),
+            RandomStretch(max_stretch),
             T.RandomCrop(
                 output_size, padding=max_translate, pad_if_needed=True,
                 padding_mode='edge'),
