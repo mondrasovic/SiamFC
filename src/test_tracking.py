@@ -28,8 +28,12 @@ def iter_video_capture() -> Iterable[np.ndarray]:
         yield frame
 
 
+def is_image_file(file: pathlib.Path) -> bool:
+    return file.suffix.lower() in (".jpg", ".jpeg", ".png")
+
+
 def iter_dir_imgs(dir_path: str) -> Iterable[np.ndarray]:
-    for file in pathlib.Path(dir_path).iterdir():
+    for file in filter(is_image_file, pathlib.Path(dir_path).iterdir()):
         img = cv.imread(str(file), cv.IMREAD_COLOR)
         yield img
 
@@ -73,10 +77,10 @@ def main(imgs_dir_path: Optional[str], model_file_path: Optional[str]) -> int:
     for frame in imgs_iter:
         if is_first:
             # bbox = np.asarray(cv.selectROI("tracker initialization", frame))
-            bbox = np.asarray((198, 214, 34, 81))
+            bbox = np.asarray((765, 389, 517, 470))
             tracker.init(cv_to_pil_img(frame), bbox)
             visualizer = SiameseTrackingVisualizer(
-                cast(np.ndarray, curr_exemplar_img))
+                cast(np.ndarray, curr_exemplar_img), border_value=(32, 32, 32))
             is_first = False
         else:
             bbox_pred = tracker.update(cv_to_pil_img(frame))

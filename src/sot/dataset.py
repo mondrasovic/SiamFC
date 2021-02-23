@@ -38,17 +38,9 @@ class RandomStretch:
         self.stretch_coef: float = stretch_coef
     
     def __call__(self, image: ImageT) -> ImageT:
-        width, height = image.size
-        
-        width_stretch = rand_uniform(-self.stretch_coef, self.stretch_coef)
-        height_stretch = rand_uniform(-self.stretch_coef, self.stretch_coef)
-        
-        new_width = int(round((1 + width_stretch) * width))
-        new_height = int(round((1 + height_stretch) * height))
-        
-        new_size = (new_width, new_height)
+        new_scale = 1.0 + rand_uniform(-self.stretch_coef, self.stretch_coef)
+        new_size = np.round(np.array(image.size, float) * new_scale).astype(int)
         interpolation = np.random.choice(self.INTERPOLATIONS)
-        
         resized_image = image.resize(new_size, interpolation)
         
         return resized_image
@@ -250,6 +242,8 @@ class SiamesePairwiseDataset(Dataset):
         n_imgs = len(valid_img_files)
         exemplar_idx, instance_idx = self._sample_pair_indices(n_imgs)
         
+        exemplar_idx = 0  # TDOO Remove this.
+        
         exemplar_img_path = valid_img_files[exemplar_idx]
         exemplar_anno = valid_annos[exemplar_idx]
         instance_img_path = valid_img_files[instance_idx]
@@ -301,20 +295,21 @@ class SiamesePairwiseDataset(Dataset):
         
         if patch.mode == 'L':
             patch = patch.convert('RGB')
-        patch_tensor = transform(patch)
+        patch_tensor = transform(patch) * 255.0
         
         return patch_tensor
     
     @staticmethod
     def _build_transforms(
             output_size: int, *, max_translate: int = 4,
-            max_stretch: float = 0.1):
-        return T.Compose([
-            RandomStretch(max_stretch),
-            T.RandomCrop(
-                output_size, padding=max_translate, pad_if_needed=True,
-                padding_mode='edge'),
-            T.ToTensor()])
+            max_stretch: float = 0.05):
+        # return T.Compose([
+        #     RandomStretch(max_stretch),
+        #     T.RandomCrop(
+        #         output_size, padding=max_translate, pad_if_needed=True,
+        #         padding_mode='edge'),
+        #     T.ToTensor()])
+        return T.Compose([T.ToTensor()])
 
 
 def build_dataset_and_init(cls, *args, **kwargs):

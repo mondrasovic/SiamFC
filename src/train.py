@@ -51,10 +51,15 @@ class SiamFCTrainer:
         weight_mat = torch.from_numpy(weight_mat).float().to(self.device)
         
         self.criterion = WeightedBCELoss(weight_mat).to(self.device)
-
+        
+        # TODO Use weight decay once again!
+        
+        # self.optimizer = optim.SGD(
+        #     self.tracker.model.parameters(), lr=self.cfg.initial_lr,
+        #     weight_decay=self.cfg.weight_decay, momentum=self.cfg.momentum)
         self.optimizer = optim.SGD(
             self.tracker.model.parameters(), lr=self.cfg.initial_lr,
-            weight_decay=self.cfg.weight_decay, momentum=self.cfg.momentum)
+            momentum=self.cfg.momentum)
         
         self.lr_scheduler = self._create_exponential_lr_scheduler(
             self.optimizer, self.cfg.initial_lr, self.cfg.ultimate_lr,
