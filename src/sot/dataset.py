@@ -152,11 +152,14 @@ class ImageNetVideoDataset(TrackingDataset):
         for object_node in root.findall('object'):
             track_id = object_node.find('trackid').text
             bbox_node = object_node.find('bndbox')
+            
             x_min = int(bbox_node.find('xmin').text)
             y_min = int(bbox_node.find('ymin').text)
             x_max = int(bbox_node.find('xmax').text)
             y_max = int(bbox_node.find('ymax').text)
+            
             bbox = BBox(x_min, y_min, x_max - x_min + 1, y_max - y_min + 1)
+            
             yield track_id, img_file_path, bbox
     
     @staticmethod
@@ -164,6 +167,7 @@ class ImageNetVideoDataset(TrackingDataset):
             test_data_dir: pathlib.Path) -> Iterable[Tuple[str, str]]:
         for track_dir in test_data_dir.iterdir():
             track_id = track_dir.name
+            
             for img_file in track_dir.iterdir():
                 yield track_id, str(img_file)
 
@@ -242,8 +246,6 @@ class SiamesePairwiseDataset(Dataset):
         n_imgs = len(valid_img_files)
         exemplar_idx, instance_idx = self._sample_pair_indices(n_imgs)
         
-        exemplar_idx = 0  # TDOO Remove this.
-        
         exemplar_img_path = valid_img_files[exemplar_idx]
         exemplar_anno = valid_annos[exemplar_idx]
         instance_img_path = valid_img_files[instance_idx]
@@ -303,13 +305,15 @@ class SiamesePairwiseDataset(Dataset):
     def _build_transforms(
             output_size: int, *, max_translate: int = 4,
             max_stretch: float = 0.05):
-        # return T.Compose([
-        #     RandomStretch(max_stretch),
-        #     T.RandomCrop(
-        #         output_size, padding=max_translate, pad_if_needed=True,
-        #         padding_mode='edge'),
-        #     T.ToTensor()])
-        return T.Compose([T.ToTensor()])
+        return T.Compose([
+            T.ColorJitter(
+                brightness=0.05, contrast=0.05, saturation=0.05, hue=0.05),
+            T.RandomHorizontalFlip(0.2),
+            RandomStretch(max_stretch),
+            T.RandomCrop(
+                output_size, padding=max_translate, pad_if_needed=True,
+                padding_mode='edge'),
+            T.ToTensor()])
 
 
 def build_dataset_and_init(cls, *args, **kwargs):
@@ -322,6 +326,7 @@ if __name__ == '__main__':
     from typing import cast, Sequence
     from got10k.datasets import GOT10k
     
+    from sot.utils import cv_show_tensor_as_img
     dataset = GOT10k(root_dir="../../../../datasets/GOT10k", subset='val')
     pairwise_dataset = SiamesePairwiseDataset(
         cast(Sequence, dataset), TrackerConfig())
@@ -329,15 +334,8 @@ if __name__ == '__main__':
     
     for i in range(count):
         exemplar_img, instance_img = pairwise_dataset[i]
-        
-        exemplar_img = (exemplar_img.numpy() * 255).astype(np.uint8)
-        exemplar_img = np.transpose(exemplar_img, axes=(1, 2, 0))
-        
-        instance_img = (instance_img.numpy() * 255).astype(np.uint8)
-        instance_img = np.transpose(instance_img, axes=(1, 2, 0))
-        
-        cv.imshow("exemplar", exemplar_img)
-        cv.imshow("instance", instance_img)
+        cv_show_tensor_as_img(exemplar_img, "exemplar")
+        cv_show_tensor_as_img(instance_img, "instance")
         cv.waitKey(0)
     
     cv.destroyAllWindows()

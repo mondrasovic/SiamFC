@@ -14,7 +14,7 @@ import torch
 import tqdm
 from got10k.datasets import GOT10k, OTB, VOT
 from torch import optim
-from torch.utils.data import DataLoader, random_split
+from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
 from common import DatasetType
@@ -27,13 +27,20 @@ from sot.utils import create_ground_truth_mask_and_weight
 
 class SiamFCTrainer:
     def __init__(
-            self, cfg: TrackerConfig, dataset_dir_path: str,
-            dataset_type: DatasetType,
+            self, cfg: TrackerConfig, train_dataset_type: DatasetType,
+            train_dataset_dir_path: str,
+            val_dataset_type: Optional[DatasetType],
+            val_dataset_dir_path: Optional[str],
             checkpoint_dir_path: Optional[str] = None,
             log_dir_path: Optional[str] = None) -> None:
         self.cfg: TrackerConfig = cfg
-        self.dataset_dir_path: str = dataset_dir_path
-        self.dataset_type: DatasetType = dataset_type
+        
+        self.train_dataset_type: DatasetType = train_dataset_type
+        self.train_dataset_dir_path: str = train_dataset_dir_path
+        
+        self.val_dataset_type: Optional[DatasetType] = val_dataset_type
+        self.val_dataset_dir_path: Optional[str] = val_dataset_dir_path
+        
         self.checkpoint_dir_path: Optional[str] = checkpoint_dir_path
         self.log_dir_path: Optional[str] = log_dir_path
         
@@ -52,14 +59,9 @@ class SiamFCTrainer:
         
         self.criterion = WeightedBCELoss(weight_mat).to(self.device)
         
-        # TODO Use weight decay once again!
-        
-        # self.optimizer = optim.SGD(
-        #     self.tracker.model.parameters(), lr=self.cfg.initial_lr,
-        #     weight_decay=self.cfg.weight_decay, momentum=self.cfg.momentum)
         self.optimizer = optim.SGD(
             self.tracker.model.parameters(), lr=self.cfg.initial_lr,
-            momentum=self.cfg.momentum)
+            weight_decay=self.cfg.weight_decay, momentum=self.cfg.momentum)
         
         self.lr_scheduler = self._create_exponential_lr_scheduler(
             self.optimizer, self.cfg.initial_lr, self.cfg.ultimate_lr,
@@ -96,16 +98,17 @@ class SiamFCTrainer:
                     self._save_checkpoint(
                         train_loss, self._build_checkpoint_file_path_and_init())
                 
-                if self.cfg.n_epochs_eval > 0:
-                    if (self.epoch % self.cfg.n_epochs_eval) == 0:
+                if val_loader:
+                    if (self.epoch % self.cfg.n_epochs_val) == 0:
                         eval_loss = self._run_epoch(val_loader, backward=False)
     
                         if writer is not None:
                             writer.add_scalar(
-                                'Loss/eval', eval_loss, self.epoch)
+                                'Loss/val', eval_loss, self.epoch)
     
                 self.lr_scheduler.step()
                 self.epoch += 1
+                
                 print("-" * 80)
         except KeyboardInterrupt:
             print("interrupting...")
@@ -151,39 +154,50 @@ class SiamFCTrainer:
     
     def _init_data_loaders(
             self, n_workers: int,
-            pin_memory: bool) -> Tuple[DataLoader, DataLoader]:
-        pairwise_dataset = self._init_pairwise_dataset()
-        
-        n_total_samples = len(pairwise_dataset)
-        n_valid_samples = int(round(
-            n_total_samples * self.cfg.validation_split))
-        n_train_samples = n_total_samples - n_valid_samples
-        
-        train_dataset, val_dataset = random_split(
-            pairwise_dataset, (n_train_samples, n_valid_samples),
-            generator=torch.Generator())
-        
+            pin_memory: bool) -> Tuple[DataLoader, Optional[DataLoader]]:
         def create_dataloader(dataset):
             return DataLoader(
                 dataset, batch_size=self.cfg.batch_size, shuffle=True,
                 num_workers=n_workers, pin_memory=pin_memory, drop_last=True)
         
+        train_kwargs = {}
+        
+        if self.train_dataset_type == DatasetType.GOT10k:
+            train_kwargs['subset'] = 'train'
+        if self.val_dataset_type:
+            val_kwargs = {}
+            
+            if self.val_dataset_type == DatasetType.GOT10k:
+                val_kwargs['subset'] = 'val'
+            
+            val_dataset = self._init_pairwise_dataset(
+                self.val_dataset_type, self.val_dataset_dir_path, **val_kwargs)
+            val_loader = create_dataloader(val_dataset)
+        else:
+            val_loader = None
+        
+        train_dataset = self._init_pairwise_dataset(
+            self.train_dataset_type, self.train_dataset_dir_path,
+            **train_kwargs)
+        
         train_loader = create_dataloader(train_dataset)
-        val_loader = create_dataloader(val_dataset)
         
         return train_loader, val_loader
     
-    def _init_pairwise_dataset(self) -> SiamesePairwiseDataset:
-        if self.dataset_type == DatasetType.GOT10K:
-            data_seq = GOT10k(root_dir=self.dataset_dir_path, subset='train')
-        elif self.dataset_type == DatasetType.OTB13:
-            data_seq = OTB(root_dir=self.dataset_dir_path, version=2013)
-        elif self.dataset_type == DatasetType.OTB15:
-            data_seq = OTB(root_dir=self.dataset_dir_path, version=2015)
-        elif self.dataset_type == DatasetType.VOT15:
-            data_seq = VOT(root_dir=self.dataset_dir_path, version=2015)
+    @staticmethod
+    def _init_pairwise_dataset(
+            dataset_type: DatasetType, dir_path: str,
+            **kwargs) -> SiamesePairwiseDataset:
+        if dataset_type == DatasetType.GOT10k:
+            data_seq = GOT10k(root_dir=dir_path, **kwargs)
+        elif dataset_type == DatasetType.OTB13:
+            data_seq = OTB(root_dir=dir_path, version=2013, **kwargs)
+        elif dataset_type == DatasetType.OTB15:
+            data_seq = OTB(root_dir=dir_path, version=2015, **kwargs)
+        elif dataset_type == DatasetType.VOT15:
+            data_seq = VOT(dir_path, version=2015, **kwargs)
         else:
-            raise ValueError(f"unsupported dataset type: {self.dataset_type}")
+            raise ValueError(f"unsupported dataset type: {dataset_type}")
         
         pairwise_dataset = SiamesePairwiseDataset(
             cast(Sequence, data_seq), TrackerConfig())
@@ -230,8 +244,14 @@ class SiamFCTrainer:
 
 
 @click.command()
-@click.argument("dataset_name")
-@click.argument("dataset_dir_path")
+@click.argument("train_dataset_name")
+@click.argument("train_dataset_dir_path")
+@click.option(
+    "-v", "--val-dataset-name",
+    help="validation dataset name")
+@click.option(
+    "-p", "--val-dataset-dir-path",
+    help="validation dataset directory path")
 @click.option(
     "-l", "--log-dir-path",
     help="directory path to save the tensorboard logs")
@@ -241,19 +261,24 @@ class SiamFCTrainer:
     "-c", "--checkpoint-file-path",
     help="checkpoint file path to start the training from")
 def main(
-        dataset_name: str, dataset_dir_path: str, log_dir_path: Optional[str],
-        checkpoints_dir_path: Optional[str],
+        train_dataset_name: str, train_dataset_dir_path: str,
+        val_dataset_name: Optional[str], val_dataset_dir_path: Optional[str],
+        log_dir_path: Optional[str], checkpoints_dir_path: Optional[str],
         checkpoint_file_path: Optional[str]) -> int:
     """
     Starts a SiamFC training with the specific DATASET_NAME
     (GOT10k | OTB13 | OTB15 | VOT15) located in the DATASET_DIR_PATH.
     """
-    # np.random.seed(731995)
     
-    dataset_type = DatasetType.decode_dataset_type(dataset_name)
+    train_dataset_type = DatasetType.decode_dataset_type(train_dataset_name)
+    val_dataset_type = None
+    if val_dataset_name:
+        val_dataset_type = DatasetType.decode_dataset_type(val_dataset_name)
+    
     cfg = TrackerConfig()
     trainer = SiamFCTrainer(
-        cfg, dataset_dir_path, dataset_type, checkpoints_dir_path, log_dir_path)
+        cfg, train_dataset_type, train_dataset_dir_path, val_dataset_type,
+        val_dataset_dir_path, checkpoints_dir_path, log_dir_path)
     trainer.run(checkpoint_file_path)
     
     return 0

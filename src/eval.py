@@ -26,7 +26,7 @@ def init_experiment(
         return ExperimentOTB(version=2013, **params)
     elif dataset_type == DatasetType.OTB15:
         return ExperimentOTB(version=2015, **params)
-    elif dataset_type == DatasetType.GOT10K:
+    elif dataset_type == DatasetType.GOT10k:
         return ExperimentGOT10k(subset='val', **params)
     elif dataset_type == DatasetType.VOT15:
         return ExperimentVOT(version=2015, **params)
