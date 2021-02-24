@@ -10,9 +10,9 @@ import dataclasses
 class TrackerConfig:
     # Training parameters.
     n_epochs: int = 50
-    n_epochs_val: int = 2
+    n_epochs_val: int = 0
     batch_size: int = 8
-    n_workers: int = 8
+    n_workers: int = 4
     free_cpus: int = 0
     
     # Optimizer parameters.
