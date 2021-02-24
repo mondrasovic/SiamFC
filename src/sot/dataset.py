@@ -297,7 +297,7 @@ class SiamesePairwiseDataset(Dataset):
         
         if patch.mode == 'L':
             patch = patch.convert('RGB')
-        patch_tensor = transform(patch) * 255.0
+        patch_tensor = transform(patch)
         
         return patch_tensor
     
@@ -306,8 +306,6 @@ class SiamesePairwiseDataset(Dataset):
             output_size: int, *, max_translate: int = 4,
             max_stretch: float = 0.05):
         return T.Compose([
-            T.ColorJitter(
-                brightness=0.05, contrast=0.05, saturation=0.05, hue=0.05),
             T.RandomHorizontalFlip(0.2),
             RandomStretch(max_stretch),
             T.RandomCrop(

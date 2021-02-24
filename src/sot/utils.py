@@ -93,7 +93,7 @@ def create_ground_truth_mask_and_weight(
 def cv_show_tensor_as_img(img: torch.Tensor, win_name: str) -> None:
     img = img.cpu().detach().squeeze(0).numpy()
     img = np.transpose(img, axes=(1, 2, 0))
-    img = cv.cvtColor(img, cv.COLOR_RGB2BGR).astype(np.uint8)
+    img = cv.cvtColor(img * 255, cv.COLOR_RGB2BGR).astype(np.uint8)
     cv.imshow(win_name, img)
 
 
@@ -116,7 +116,7 @@ _pil_to_tensor_transform = transforms.PILToTensor()
 
 
 def pil_to_tensor(img: ImageT) -> torch.Tensor:
-    return _pil_to_tensor_transform(img).float()
+    return _pil_to_tensor_transform(img).float() / 255.0
 
 
 def assure_int_bbox(bbox: np.ndarray) -> np.ndarray:
