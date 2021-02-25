@@ -94,6 +94,8 @@ class SiamFCTrainer:
                 if writer is not None:
                     writer.add_scalar('Loss/train', train_loss, self.epoch)
                 
+                self.lr_scheduler.step()
+                
                 if self.checkpoint_dir_path is not None:
                     self._save_checkpoint(
                         train_loss, self._build_checkpoint_file_path_and_init())
@@ -106,7 +108,6 @@ class SiamFCTrainer:
                             writer.add_scalar(
                                 'Loss/val', eval_loss, self.epoch)
     
-                self.lr_scheduler.step()
                 self.epoch += 1
                 
                 print("-" * 80)
