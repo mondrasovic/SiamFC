@@ -45,8 +45,9 @@ class BBox:
         xy = self.center - self.size // 2
         return np.concatenate((xy, xy + self.size))
     
-    def as_xywh(self) -> np.ndarray:
-        xy = self.center - self.size // 2
+    def as_xywh(self, zero_based: bool = True) -> np.ndarray:
+        center = self.center if zero_based else self.center + 1
+        xy = center - self.size // 2
         return np.concatenate((xy, self.size))
     
     def as_tl_br(self) -> Tuple[np.ndarray, np.ndarray]:

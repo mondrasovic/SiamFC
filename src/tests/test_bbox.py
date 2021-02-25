@@ -45,8 +45,11 @@ class TestBBox(unittest.TestCase):
         self.assertEqual(tl.tolist(), [10, 20])
         self.assertEqual(br.tolist(), [310, 420])
     
-    def test_x_y_width_height_calculation(self):
+    def test_x_y_width_height_calculation_zero_based(self):
         self.assertEqual(self.bbox.as_xywh().tolist(), [10, 20, 300, 400])
+    
+    def test_x_y_width_height_calculation_one_based(self):
+        self.assertEqual(self.bbox.as_xywh(False).tolist(), [11, 21, 300, 400])
     
     def test_negative_width_scale_factor(self):
         with self.assertRaises(AssertionError):
