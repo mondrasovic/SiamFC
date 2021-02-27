@@ -1,1 +1,1 @@
-python train.py GOT10k ../../../datasets/GOT10k -l ../logs -d ../checkpoints -c ../checkpoints/checkpoint_005.pth
+python train.py GOT10k ../../../datasets/GOT10k -l ../logs -d ../checkpoints -c ../checkpoints/checkpoint_021.pth
