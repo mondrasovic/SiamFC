@@ -314,6 +314,115 @@ class SiamesePairwiseDataset(Dataset):
             T.ToTensor()])
 
 
+class SiamesePairwiseWithTimeDataset(Dataset):
+    def __init__(self, data_seq: Sequence, cfg: TrackerConfig,
+                 time_point: int = 25, time_weight: float = 0.5) -> None:
+        super().__init__()
+        
+        self.data_seq: Sequence = data_seq
+        self.cfg: TrackerConfig = cfg
+        
+        self.indices: np.ndarray = np.random.permutation(len(self.data_seq))
+        
+        self.transform_exemplar = self._build_transforms(self.cfg.exemplar_size)
+        self.transform_instance = self._build_transforms(self.cfg.instance_size)
+        
+        self.time_weight_decay = (1 / time_point) * np.log(1 - time_weight)
+    
+    def __getitem__(self, index: int) -> PairItemT:
+        index = self.indices[index % len(self.data_seq)]
+        img_files, annos = self.data_seq[index]
+        annos = annos.astype(np.int)
+        
+        valid_indices = self._filter_valid_indices(annos)
+        valid_img_files = np.asarray(img_files)[valid_indices]
+        valid_annos = annos[valid_indices, :]
+        
+        n_imgs = len(valid_img_files)
+        exemplar_idx, instance_idx = self._sample_pair_indices(n_imgs)
+        
+        exemplar_img_path = valid_img_files[exemplar_idx]
+        exemplar_anno = valid_annos[exemplar_idx]
+        instance_img_path = valid_img_files[instance_idx]
+        instance_anno = valid_annos[instance_idx]
+        
+        size_ratio = self.cfg.exemplar_size / self.cfg.instance_size
+        exemplar_img = self._read_image_and_transform(
+            exemplar_img_path, exemplar_anno, self.cfg.exemplar_size,
+            self.transform_exemplar, size_ratio)
+        instance_img = self._read_image_and_transform(
+            instance_img_path, instance_anno, self.cfg.instance_size,
+            self.transform_instance)
+        
+        exemplar_img = self._add_time_dimension(exemplar_img, 0)
+        time_diff = instance_idx - exemplar_idx
+        instance_img = self._add_time_dimension(instance_img, time_diff)
+        
+        return exemplar_img, instance_img
+    
+    def __len__(self) -> int:
+        return len(self.data_seq) * self.cfg.pairs_per_seq
+    
+    def _sample_pair_indices(self, n_items: int) -> Tuple[int, int]:
+        max_distance = min(n_items - 1, self.cfg.max_pair_dist)
+        rand_indices = np.random.choice(max_distance + 1, 2)
+        rand_start = np.random.randint(n_items - max_distance)
+        rand_indices = rand_indices + rand_start
+        
+        if rand_indices[1] < rand_indices[0]:
+            rand_indices[0], rand_indices[1] = rand_indices[1], rand_indices[0]
+        
+        return rand_indices
+    
+    def _filter_valid_indices(self, annos: np.ndarray) -> np.ndarray:
+        side_lengths = annos[:, 2:]
+        valid_indices = side_lengths.prod(axis=1) >= self.cfg.min_bbox_area
+        return valid_indices
+    
+    @staticmethod
+    def _read_image_and_transform(
+            img_path: str, anno: np.ndarray, output_side_size: int,
+            transform: Callable[[Image.Image], torch.Tensor],
+            size_with_context_scale: float = 1.0) -> torch.Tensor:
+        bbox = BBox(*anno)
+        side_size_with_context = calc_bbox_side_size_with_context(bbox)
+        side_size_scaled = side_size_with_context * size_with_context_scale
+        new_size = (side_size_scaled, side_size_scaled)
+        bbox.size = np.asarray(new_size).round().astype(np.int)  # !!!
+        
+        img = Image.open(img_path)
+        output_side = (output_side_size, output_side_size)
+        patch = center_crop_and_resize(img, bbox, output_side)
+        
+        if patch.mode == 'L':
+            patch = patch.convert('RGB')
+        patch_tensor = transform(patch)
+        
+        return patch_tensor
+        
+    def _add_time_dimension(
+            self, img: torch.Tensor, time: float) -> torch.Tensor:
+        weight = 1 - np.exp(self.time_weight_decay * time)
+        
+        weight_dim = torch.full((1, *img.shape[1:]), weight)
+        time_weighted_img = torch.vstack((img, weight_dim))
+        
+        return time_weighted_img
+    
+    @staticmethod
+    def _build_transforms(
+            output_size: int, *, max_translate: int = 4,
+            max_stretch: float = 0.05):
+        # return T.Compose([
+        #     T.RandomHorizontalFlip(0.2),
+        #     RandomStretch(max_stretch),
+        #     T.RandomCrop(
+        #         output_size, padding=max_translate, pad_if_needed=True,
+        #         padding_mode='edge'),
+        #     T.ToTensor()])
+        return T.ToTensor()
+
+
 def build_dataset_and_init(cls, *args, **kwargs):
     inst = cls(*args, **kwargs)
     inst.initialize()

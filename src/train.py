@@ -15,11 +15,12 @@ import tqdm
 from got10k.datasets import GOT10k, OTB, VOT
 from torch import optim
 from torch.utils.data import DataLoader
+from torch.utils.data import Dataset
 from torch.utils.tensorboard import SummaryWriter
 
 from common import DatasetType
 from sot.cfg import TrackerConfig
-from sot.dataset import SiamesePairwiseDataset
+from sot.dataset import SiamesePairwiseDataset, SiamesePairwiseWithTimeDataset
 from sot.losses import WeightedBCELoss
 from sot.tracker import TrackerSiamFC
 from sot.utils import create_ground_truth_mask_and_weight
@@ -191,8 +192,7 @@ class SiamFCTrainer:
     
     @staticmethod
     def _init_pairwise_dataset(
-            dataset_type: DatasetType, dir_path: str,
-            **kwargs) -> SiamesePairwiseDataset:
+            dataset_type: DatasetType, dir_path: str, **kwargs) -> Dataset:
         if dataset_type == DatasetType.GOT10k:
             data_seq = GOT10k(root_dir=dir_path, **kwargs)
         elif dataset_type == DatasetType.OTB13:
@@ -204,7 +204,7 @@ class SiamFCTrainer:
         else:
             raise ValueError(f"unsupported dataset type: {dataset_type}")
         
-        pairwise_dataset = SiamesePairwiseDataset(
+        pairwise_dataset = SiamesePairwiseWithTimeDataset(
             cast(Sequence, data_seq), TrackerConfig())
         
         return pairwise_dataset
