@@ -100,13 +100,12 @@ class SiamFCTrainer:
                     self._save_checkpoint(
                         train_loss, self._build_checkpoint_file_path_and_init())
                 
-                if val_loader:
-                    if (self.epoch % self.cfg.n_epochs_val) == 0:
-                        eval_loss = self._run_epoch(val_loader, backward=False)
-    
-                        if writer is not None:
-                            writer.add_scalar(
-                                'Loss/val', eval_loss, self.epoch)
+                if self._should_validate(val_loader):
+                    eval_loss = self._run_epoch(val_loader, backward=False)
+
+                    if writer is not None:
+                        writer.add_scalar(
+                            'Loss/val', eval_loss, self.epoch)
     
                 self.epoch += 1
                 
@@ -116,6 +115,11 @@ class SiamFCTrainer:
         finally:
             if writer is not None:
                 writer.close()
+    
+    def _should_validate(self, val_loader: DataLoader) -> bool:
+        return val_loader and \
+               (self.cfg.n_epochs_val > 0) and \
+               (self.epoch % self.cfg.n_epochs_val == 0)
     
     def _run_epoch(
             self, data_loader: DataLoader, *, backward: bool = True) -> float:
