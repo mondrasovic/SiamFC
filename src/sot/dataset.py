@@ -433,11 +433,14 @@ if __name__ == '__main__':
     from typing import cast, Sequence
     from got10k.datasets import GOT10k
     
+    np.random.seed(731995)
+    
     from sot.utils import cv_show_tensor_as_img
-    dataset = GOT10k(root_dir="../../../../datasets/GOT10k", subset='val')
-    pairwise_dataset = SiamesePairwiseDataset(
+    dataset = GOT10k(
+        root_dir="../../../../datasets/GOT10k_small", subset='train')
+    pairwise_dataset = SiamesePairwiseWithTimeDataset(
         cast(Sequence, dataset), TrackerConfig())
-    count = 10
+    count = 5
     
     for i in range(count):
         exemplar_img, instance_img = pairwise_dataset[i]

@@ -41,7 +41,11 @@ def iter_dir_imgs(dir_path: str) -> Iterable[np.ndarray]:
 @click.command()
 @click.option("-i", "--imgs-dir-path", help="directory path with images")
 @click.option("-m", "--model-file-path", help="a pre-trained model file path")
-def main(imgs_dir_path: Optional[str], model_file_path: Optional[str]) -> int:
+@click.option(
+    "-o", "--output-dir-path", help="directory path for frame tracking previews")
+def main(
+        imgs_dir_path: Optional[str], model_file_path: Optional[str],
+        output_dir_path: Optional[str]) -> int:
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     cfg = TrackerConfig()
     tracker = TrackerSiamFC(cfg, device, model_file_path)
@@ -77,10 +81,11 @@ def main(imgs_dir_path: Optional[str], model_file_path: Optional[str]) -> int:
     for frame in imgs_iter:
         if is_first:
             # bbox = np.asarray(cv.selectROI("tracker initialization", frame))
-            bbox = np.asarray((765, 389, 517, 470))
+            bbox = np.asarray((262, 127, 386, 66))
             tracker.init(cv_to_pil_img(frame), bbox)
             visualizer = SiameseTrackingVisualizer(
-                cast(np.ndarray, curr_exemplar_img), border_value=(32, 32, 32))
+                cast(np.ndarray, curr_exemplar_img), border_value=(32, 32, 32),
+                output_dir_path=output_dir_path, wait_key=1)
             is_first = False
         else:
             bbox_pred = tracker.update(cv_to_pil_img(frame))

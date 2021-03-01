@@ -274,7 +274,6 @@ def main(
     Starts a SiamFC training with the specific DATASET_NAME
     (GOT10k | OTB13 | OTB15 | VOT15) located in the DATASET_DIR_PATH.
     """
-    
     train_dataset_type = DatasetType.decode_dataset_type(train_dataset_name)
     val_dataset_type = None
     if val_dataset_name:

@@ -58,6 +58,11 @@ class TrackerSiamFC(Tracker):
         self.on_exemplar_img_extract: TrackImgCb = None
         self.on_instance_img_extract: TrackImgCb = None
         self.on_response_map_calc: TrackImgCb = None
+        
+        time_point = 25
+        time_weight = 0.5
+        self.time_weight_decay = (1 / time_point) * np.log(1 - time_weight)
+        self.curr_time = 0
     
     @torch.no_grad()
     def init(self, img: ImageT, bbox: np.ndarray) -> None:
@@ -81,10 +86,13 @@ class TrackerSiamFC(Tracker):
         if self.on_exemplar_img_extract:
             self.on_exemplar_img_extract(exemplar_img)
         
-        exemplar_img_tensor = torch.unsqueeze(pil_to_tensor(exemplar_img), 0)
+        exemplar_img_tensor = torch.unsqueeze(
+            self._add_time_dimension(pil_to_tensor(exemplar_img)), 0)
         exemplar_img_tensor = exemplar_img_tensor.to(self.device)
         self.exemplar_emb = self.model.extract_visual_features(
             exemplar_img_tensor)
+        
+        self.curr_time += 1
     
     @torch.no_grad()
     def update(self, img: ImageT) -> np.ndarray:
@@ -98,7 +106,8 @@ class TrackerSiamFC(Tracker):
             for bbox in self.iter_target_centered_scaled_instance_bboxes()]
         
         instances_imgs_tensor = torch.stack(
-            [pil_to_tensor(img) for img in instances_imgs])
+            [self._add_time_dimension(pil_to_tensor(img))
+             for img in instances_imgs])
         instances_imgs_tensor = instances_imgs_tensor.to(self.device)
         instances_features = self.model.extract_visual_features(
             instances_imgs_tensor)
@@ -158,8 +167,19 @@ class TrackerSiamFC(Tracker):
         # Change from [row, col] to [x, y] coordinates.
         self.target_bbox.shift(disp_in_image[::-1])
         self.target_bbox.rescale(new_scale, new_scale)
+
+        self.curr_time += 1
         
         return self.target_bbox.as_xywh()
+
+    def _add_time_dimension(self, img: torch.Tensor) -> torch.Tensor:
+        self.curr_time = 0
+        weight = 1 - np.exp(self.time_weight_decay * self.curr_time)
+    
+        weight_dim = torch.full((1, *img.shape[1:]), weight)
+        time_weighted_img = torch.vstack((img, weight_dim))
+    
+        return time_weighted_img
     
     def iter_target_centered_scaled_instance_bboxes(self) -> Iterable[BBox]:
         side_size = int(round(self.curr_instance_side_size))

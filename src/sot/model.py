@@ -43,7 +43,7 @@ class SiamFCModel(nn.Module):
         self.response_map_scale: float = response_map_scale
         
         self.conv1 = _ConvBlock(
-            in_channels=3, out_channels=96, kernel_size=11, stride=2,
+            in_channels=4, out_channels=96, kernel_size=11, stride=2,
             max_pool=True)
         self.conv2 = _ConvBlock(
             in_channels=96, out_channels=256, kernel_size=5, groups=2,

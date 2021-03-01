@@ -3,6 +3,7 @@
 
 # Author: Milan Ondrasovic <milan.ondrasovic@gmail.com>
 
+import os
 import math
 from typing import Tuple, Optional
 
@@ -69,12 +70,19 @@ class SiameseTrackingVisualizer:
             self, exemplar_img: np.ndarray, *,
             border_value: ColorT = (0, 0, 0),
             win_name: str = "Siamese Tracking Preview",
-            wait_key: int = 0, quit_key: str = 'q') -> None:
+            wait_key: int = 0, quit_key: str = 'q',
+            output_dir_path: Optional[str] = None) -> None:
         self.exemplar_img: np.ndarray = exemplar_img
         self.border_value: ColorT = border_value
         self.win_name: str = win_name
         self.wait_key: int = wait_key
         self.quit_key: str = quit_key
+        self.output_dir_path: Optional[str] = output_dir_path
+        
+        if self.output_dir_path:
+            os.makedirs(self.output_dir_path, exist_ok=True)
+        
+        self._iter: int = 1
 
     def show_curr_state(
             self, curr_frame: np.ndarray, instance_img: np.ndarray,
@@ -91,7 +99,17 @@ class SiameseTrackingVisualizer:
         key = cv.waitKey(self.wait_key) & 0xff
         ret = (key != ord(self.quit_key))
         
+        if self.output_dir_path:
+            file_name = f"tracking_preview_{self._iter:04d}.png"
+            output_file_path = os.path.join(self.output_dir_path, file_name)
+            cv.imwrite(output_file_path, preview_img)
+        
+        self._iter += 1
+        
         return ret
     
     def close(self) -> None:
         cv.destroyWindow(self.win_name)
+    
+    def reset(self) -> None:
+        self._iter = 1
