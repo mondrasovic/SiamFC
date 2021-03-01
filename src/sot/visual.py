@@ -3,6 +3,7 @@
 
 # Author: Milan Ondrasovic <milan.ondrasovic@gmail.com>
 
+import os
 import math
 from typing import Tuple, Optional
 
@@ -10,6 +11,7 @@ import cv2 as cv
 import numpy as np
 
 from sot.utils import SizeT
+
 
 ColorT = Tuple[int, int, int]
 
@@ -19,7 +21,7 @@ def _render_bbox(
         color: ColorT = (201, 216, 53)) -> None:
     x1, y1 = tuple(bbox[:2])
     x2, y2 = tuple(bbox[:2] + bbox[2:])
-
+    
     roi = image[y1:y2, x1:x2]
     rect = np.ones_like(roi) * 255
     
@@ -47,20 +49,20 @@ def _concat_imgs(
         dim_idx = 1  # Width
         pad_indexes = (2, 3)  # Left, right
         stack_func = np.vstack
-
+    
     max_dim = max(img.shape[dim_idx] for img in imgs)
     padded_imgs = []
-
+    
     for img in imgs:
         dim_diff_half = (max_dim - img.shape[dim_idx]) / 2
         pads = [0, 0, 0, 0]
         pads[pad_indexes[0]] = int(math.floor(dim_diff_half))
         pads[pad_indexes[1]] = int(math.ceil(dim_diff_half))
-
+        
         padded_img = cv.copyMakeBorder(
             img, *pads, borderType=cv.BORDER_CONSTANT, value=border_value)
         padded_imgs.append(padded_img)
-
+    
     return stack_func(padded_imgs)
 
 
@@ -69,13 +71,20 @@ class SiameseTrackingVisualizer:
             self, exemplar_img: np.ndarray, *,
             border_value: ColorT = (0, 0, 0),
             win_name: str = "Siamese Tracking Preview",
-            wait_key: int = 0, quit_key: str = 'q') -> None:
+            wait_key: int = 0, quit_key: str = 'q',
+            output_dir_path: Optional[str] = None) -> None:
         self.exemplar_img: np.ndarray = exemplar_img
         self.border_value: ColorT = border_value
         self.win_name: str = win_name
         self.wait_key: int = wait_key
         self.quit_key: str = quit_key
-
+        self.output_dir_path: Optional[str] = output_dir_path
+        
+        if self.output_dir_path:
+            os.makedirs(self.output_dir_path, exist_ok=True)
+        
+        self._iter: int = 1
+    
     def show_curr_state(
             self, curr_frame: np.ndarray, instance_img: np.ndarray,
             response_map: np.ndarray, bbox_pred: np.ndarray) -> bool:
@@ -91,7 +100,17 @@ class SiameseTrackingVisualizer:
         key = cv.waitKey(self.wait_key) & 0xff
         ret = (key != ord(self.quit_key))
         
+        if self.output_dir_path:
+            file_name = f"tracking_preview_{self._iter:04d}.png"
+            output_file_path = os.path.join(self.output_dir_path, file_name)
+            cv.imwrite(output_file_path, preview_img)
+        
+        self._iter += 1
+        
         return ret
     
     def close(self) -> None:
         cv.destroyWindow(self.win_name)
+    
+    def reset(self) -> None:
+        self._iter = 1
