@@ -118,6 +118,7 @@ class SiamFCTrainer:
     
     def _should_validate(self, val_loader: DataLoader) -> bool:
         return val_loader and \
+               (self.epoch >= self.cfg.val_epoch_start) and \
                (self.cfg.n_epochs_val > 0) and \
                (self.epoch % self.cfg.n_epochs_val == 0)
     
