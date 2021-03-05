@@ -8,7 +8,8 @@ from typing import Optional
 
 import click
 import torch
-from got10k.experiments import ExperimentOTB, ExperimentGOT10k, ExperimentVOT
+from got10k.experiments import (
+    ExperimentOTB, ExperimentGOT10k, ExperimentVOT, ExperimentUAV123)
 
 from common import DatasetType
 from sot.cfg import TrackerConfig
@@ -30,6 +31,8 @@ def init_experiment(
         return ExperimentGOT10k(subset='val', **params)
     elif dataset_type == DatasetType.VOT15:
         return ExperimentVOT(version=2015, **params)
+    elif dataset_type == DatasetType.UAV123:
+        return ExperimentUAV123(**params)
     else:
         raise ValueError(f"unsupported dataset type {dataset_type}")
 
@@ -46,7 +49,7 @@ def main(
         model_file_path: Optional[str]) -> int:
     """
     Starts a SiamFC evaluation with the specific DATASET_NAME
-    (GOT10k | OTB13 | OTB15 | VOT15) located in the DATASET_DIR_PATH.
+    (GOT10k | OTB13 | OTB15 | VOT15 | UAV123) located in the DATASET_DIR_PATH.
     """
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     cfg = TrackerConfig()

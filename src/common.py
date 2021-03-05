@@ -12,6 +12,8 @@ class DatasetType(enum.Enum):
     OTB13 = 'OTB13'
     OTB15 = 'OTB15'
     VOT15 = 'VOT15'
+    UAV123 = 'UAV123'
+    ILSVRC15 = 'ILSVRC15'
     
     @staticmethod
     def decode_dataset_type(dataset_name: str) -> 'DatasetType':

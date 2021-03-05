@@ -22,6 +22,23 @@ from sot.utils import (
 TrackImgCb = Optional[Callable[[Union[np.ndarray, ImageT]], None]]
 
 
+def create_square_cosine_window(size: int) -> np.ndarray:
+    # Create a normalized cosine (Hanning) window.
+    hanning_1d = np.hanning(size)
+    hanning_2d = np.outer(hanning_1d, hanning_1d)
+    hanning_2d /= np.sum(hanning_2d)
+    
+    return hanning_2d
+
+
+def create_search_scales(scale_step: float, count: int) -> np.ndarray:
+    n_half_search_scales = count // 2
+    search_scales = scale_step ** np.linspace(
+        -n_half_search_scales, n_half_search_scales, count)
+    
+    return search_scales
+
+
 class TrackerSiamFC(Tracker):
     def __init__(
             self, cfg: TrackerConfig, device: Union[torch.device, str],
@@ -44,10 +61,10 @@ class TrackerSiamFC(Tracker):
         
         self.response_size_upscaled: int = \
             self.cfg.response_size * self.cfg.response_upscale
-        self.cosine_win: np.ndarray = self.create_square_cosine_window(
+        self.cosine_win: np.ndarray = create_square_cosine_window(
             self.response_size_upscaled)
         
-        self.search_scales: np.ndarray = self.create_search_scales(
+        self.search_scales: np.ndarray = create_search_scales(
             self.cfg.scale_step, self.cfg.n_scales)
         
         self.curr_instance_side_size: int = self.cfg.instance_size
@@ -168,20 +185,3 @@ class TrackerSiamFC(Tracker):
         
         for scale in self.search_scales:
             yield bbox.rescale(scale, scale, in_place=False)
-    
-    @staticmethod
-    def create_square_cosine_window(size: int) -> np.ndarray:
-        # Create a normalized cosine (Hanning) window.
-        hanning_1d = np.hanning(size)
-        hanning_2d = np.outer(hanning_1d, hanning_1d)
-        hanning_2d /= np.sum(hanning_2d)
-        
-        return hanning_2d
-    
-    @staticmethod
-    def create_search_scales(scale_step: float, count: int) -> np.ndarray:
-        n_half_search_scales = count // 2
-        search_scales = scale_step ** np.linspace(
-            -n_half_search_scales, n_half_search_scales, count)
-        
-        return search_scales

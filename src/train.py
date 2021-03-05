@@ -12,7 +12,7 @@ import click
 import numpy as np
 import torch
 import tqdm
-from got10k.datasets import GOT10k, OTB, VOT
+from got10k.datasets import GOT10k, OTB, VOT, ImageNetVID
 from torch import optim
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
@@ -136,19 +136,19 @@ class SiamFCTrainer:
             for batch, (exemplar, instance) in enumerate(data_loader, start=1):
                 exemplar = exemplar.to(self.device)
                 instance = instance.to(self.device)
-                
+    
                 pred_response_maps = self.tracker.model(exemplar, instance)
                 loss = self.criterion(pred_response_maps, self.mask_mat)
-                
+    
                 if backward:
                     self.optimizer.zero_grad()
                     loss.backward()
                     self.optimizer.step()
-                
+    
                 curr_loss = loss.item()
                 losses_sum += curr_loss
                 curr_batch_loss = losses_sum / batch
-                
+    
                 loss_text = f"loss: {curr_loss:.5f} ({curr_batch_loss:.5f})"
                 pbar.set_description(f"{epoch_text} | {loss_text}")
                 pbar.update()
@@ -201,6 +201,8 @@ class SiamFCTrainer:
             data_seq = OTB(root_dir=dir_path, version=2015, **kwargs)
         elif dataset_type == DatasetType.VOT15:
             data_seq = VOT(dir_path, version=2015, **kwargs)
+        elif dataset_type == DatasetType.ILSVRC15:
+            data_seq = ImageNetVID(root_dir=dir_path, subset='train', **kwargs)
         else:
             raise ValueError(f"unsupported dataset type: {dataset_type}")
         
