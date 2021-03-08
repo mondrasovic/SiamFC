@@ -258,9 +258,9 @@ def generate_track(
 
 
 @click.command()
-@click.argument('n_tracks')
-@click.argument('output_dir_path')
-def main(n_tracks, output_dir_path):
+@click.argument('n_tracks', type=int)
+@click.argument('output_dir_path', type=click.Path())
+def main(n_tracks: int, output_dir_path: str) -> int:
     np.random.seed(731995)
     
     img_size = np.asarray((IMG_WIDTH, IMG_HEIGHT))
@@ -269,7 +269,7 @@ def main(n_tracks, output_dir_path):
     tracked_obj_names = ('rectangle', 'ellipse')
     output_dir = pathlib.Path(output_dir_path)
     
-    for track_id in tqdm.tqdm(range(1, int(n_tracks) + 1)):
+    for track_id in tqdm.tqdm(range(1, n_tracks + 1)):
         track_output_dir = output_dir / f"track_{track_id:04d}"
         generate_track(
             tracked_obj_names, obj_gen, img_gen, track_output_dir)

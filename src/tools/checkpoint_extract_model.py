@@ -10,8 +10,8 @@ import torch
 
 
 @click.command()
-@click.argument("checkpoint_file_path")
-@click.argument("model_output_file_path")
+@click.argument("checkpoint_file_path", type=click.Path(exists=True))
+@click.argument("model_output_file_path", type=click.Path())
 def main(checkpoint_file_path, model_output_file_path):
     """
     Extracts the saved model in a checkpoint given by the CHECKPOINT_FILE_PATH

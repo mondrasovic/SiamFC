@@ -254,20 +254,21 @@ class SiamFCTrainer:
 
 @click.command()
 @click.argument("train_dataset_name")
-@click.argument("train_dataset_dir_path")
+@click.argument("train_dataset_dir_path", type=click.Path(exists=True))
 @click.option(
     "-v", "--val-dataset-name",
     help="validation dataset name")
 @click.option(
-    "-p", "--val-dataset-dir-path",
+    "-p", "--val-dataset-dir-path", type=click.Path(exists=True),
     help="validation dataset directory path")
 @click.option(
-    "-l", "--log-dir-path",
+    "-l", "--log-dir-path", type=click.Path(),
     help="directory path to save the tensorboard logs")
 @click.option(
-    "-d", "--checkpoints-dir-path", help="directory path to save checkpoints")
+    "-d", "--checkpoints-dir-path", type=click.Path(),
+    help="directory path to save checkpoints")
 @click.option(
-    "-c", "--checkpoint-file-path",
+    "-c", "--checkpoint-file-path", type=click.Path(exists=True),
     help="checkpoint file path to start the training from")
 def main(
         train_dataset_name: str, train_dataset_dir_path: str,
