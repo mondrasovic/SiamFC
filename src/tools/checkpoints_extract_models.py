@@ -7,6 +7,7 @@ import sys
 import tqdm
 import click
 import pathlib
+from typing import Optional
 
 from utils import extract_model_from_checkpoint
 
@@ -14,7 +15,13 @@ from utils import extract_model_from_checkpoint
 @click.command()
 @click.argument("checkpoints_dir_path", type=click.Path(exists=True))
 @click.argument("models_output_dir_path", type=click.Path())
-def main(checkpoints_dir_path: str, models_output_dir_path: str) -> int:
+@click.option(
+    "--tracker-name",
+    help="tracker name (for producing results and reports) to which a suffix "
+         "will be added")
+def main(
+        checkpoints_dir_path: str, models_output_dir_path: str,
+        tracker_name: Optional[str]) -> int:
     """
     Extracts the saved models stored in checkpoints given by the
     CHECKPOINTS_DIR_PATH as separate files generated in the
@@ -29,7 +36,8 @@ def main(checkpoints_dir_path: str, models_output_dir_path: str) -> int:
         epoch_suffix_sep_pos = checkpoint_file.stem.rfind("_")
         epoch_suffix = checkpoint_file.stem[epoch_suffix_sep_pos + 1:]
         
-        model_file_name = f"model_SiamFC_{epoch_suffix}.pth"
+        curr_tracker_name = tracker_name if tracker_name else "SiamFC"
+        model_file_name = f"{curr_tracker_name}_{epoch_suffix}.pth"
         model_output_file_path = str(models_output_dir / model_file_name)
         
         extract_model_from_checkpoint(
