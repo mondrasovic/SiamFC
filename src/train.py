@@ -32,7 +32,8 @@ class SiamFCTrainer:
             val_dataset_type: Optional[DatasetType],
             val_dataset_dir_path: Optional[str],
             checkpoint_dir_path: Optional[str] = None,
-            log_dir_path: Optional[str] = None) -> None:
+            log_dir_path: Optional[str] = None,
+            model_file_path: Optional[str] = None) -> None:
         self.cfg: TrackerConfig = cfg
         
         self.train_dataset_type: DatasetType = train_dataset_type
@@ -47,7 +48,8 @@ class SiamFCTrainer:
         self.device: torch.device = torch.device(
             'cuda' if torch.cuda.is_available() else 'cpu')
         
-        self.tracker: TrackerSiamFC = TrackerSiamFC(cfg, self.device)
+        self.tracker: TrackerSiamFC = TrackerSiamFC(
+            cfg, self.device, model_path=model_file_path)
         
         response_map_size = (self.cfg.response_size, self.cfg.response_size)
         mask_mat, weight_mat = create_ground_truth_mask_and_weight(
@@ -270,11 +272,15 @@ class SiamFCTrainer:
 @click.option(
     "-c", "--checkpoint-file-path", type=click.Path(exists=True),
     help="checkpoint file path to start the training from")
+@click.option(
+    "-m", "--model-file-path", type=click.Path(exists=True),
+    help="a pre-trained model file path (for fine-tuning)")
 def main(
         train_dataset_name: str, train_dataset_dir_path: str,
         val_dataset_name: Optional[str], val_dataset_dir_path: Optional[str],
         log_dir_path: Optional[str], checkpoints_dir_path: Optional[str],
-        checkpoint_file_path: Optional[str]) -> int:
+        checkpoint_file_path: Optional[str],
+        model_file_path: Optional[str]) -> int:
     """
     Starts a SiamFC training with the specific DATASET_NAME
     (GOT10k | OTB13 | OTB15 | VOT15) located in the DATASET_DIR_PATH.
@@ -288,7 +294,8 @@ def main(
     cfg = TrackerConfig()
     trainer = SiamFCTrainer(
         cfg, train_dataset_type, train_dataset_dir_path, val_dataset_type,
-        val_dataset_dir_path, checkpoints_dir_path, log_dir_path)
+        val_dataset_dir_path, checkpoints_dir_path, log_dir_path,
+        model_file_path)
     trainer.run(checkpoint_file_path)
     
     return 0
