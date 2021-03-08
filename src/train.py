@@ -164,7 +164,8 @@ class SiamFCTrainer:
         def create_dataloader(dataset):
             return DataLoader(
                 dataset, batch_size=self.cfg.batch_size, shuffle=True,
-                num_workers=n_workers, pin_memory=pin_memory, drop_last=True)
+                num_workers=n_workers, pin_memory=pin_memory, drop_last=True,
+                persistent_workers=True)
         
         train_kwargs = {}
         

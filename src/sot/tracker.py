@@ -22,7 +22,7 @@ from sot.utils import (
 TrackImgCb = Optional[Callable[[Union[np.ndarray, ImageT]], None]]
 
 
-def create_square_cosine_window(size: int) -> np.ndarray:
+def _create_square_cosine_window(size: int) -> np.ndarray:
     # Create a normalized cosine (Hanning) window.
     hanning_1d = np.hanning(size)
     hanning_2d = np.outer(hanning_1d, hanning_1d)
@@ -31,7 +31,7 @@ def create_square_cosine_window(size: int) -> np.ndarray:
     return hanning_2d
 
 
-def create_search_scales(scale_step: float, count: int) -> np.ndarray:
+def _create_search_scales(scale_step: float, count: int) -> np.ndarray:
     n_half_search_scales = count // 2
     search_scales = scale_step ** np.linspace(
         -n_half_search_scales, n_half_search_scales, count)
@@ -42,8 +42,9 @@ def create_search_scales(scale_step: float, count: int) -> np.ndarray:
 class TrackerSiamFC(Tracker):
     def __init__(
             self, cfg: TrackerConfig, device: Union[torch.device, str],
-            model_path: Optional[str] = None) -> None:
-        super().__init__(name='SiamFC', is_deterministic=True)
+            model_path: Optional[str] = None,
+            name: str = 'SiamFC') -> None:
+        super().__init__(name=name, is_deterministic=True)
         
         self.cfg: TrackerConfig = cfg
         
@@ -61,10 +62,10 @@ class TrackerSiamFC(Tracker):
         
         self.response_size_upscaled: int = \
             self.cfg.response_size * self.cfg.response_upscale
-        self.cosine_win: np.ndarray = create_square_cosine_window(
+        self.cosine_win: np.ndarray = _create_square_cosine_window(
             self.response_size_upscaled)
         
-        self.search_scales: np.ndarray = create_search_scales(
+        self.search_scales: np.ndarray = _create_search_scales(
             self.cfg.scale_step, self.cfg.n_scales)
         
         self.curr_instance_side_size: int = self.cfg.instance_size
